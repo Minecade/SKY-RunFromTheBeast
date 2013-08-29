@@ -1,0 +1,37 @@
+# plugin config for bukkit
+name: ${project.name}
+main: ${main.class}
+version: '${project.version}'
+authors: [kvnamo, victorv977]
+#load: startup # disabled because we need to load the worlds, to load the world ther server must be loaded.
+
+database: true
+
+commands:
+    serverinfo:
+        description: Get current server info.
+        usage: Use /serverinfo
+    kill:
+        description: Blocked command.
+        usage: Use /kill
+    me:
+        description: Blocked command.
+        usage: Use /me
+    saveworld:
+        description: Save modifications on the world the issuer player is in. (in-game only)
+    ban:
+        description: Ban players
+    unban:
+        description: Unban players
+    vip:
+        description: Set players as a VIP
+    unvip:
+        description: Set players as a VIP
+    gm:
+        description: Use it to add a GM (Ops only)
+    ungm:
+        description: Use it to remove a GM (Ops only)
+    cm:
+        description: Use it to add a CM (Ops only)
+    uncm:
+        description: Use it to remove a CM (Ops only)

@@ -15,7 +15,7 @@
   
   <properties>
     <minecade.engine.version>0.0.1-SNAPSHOT</minecade.engine.version>
-    <main.class>com.minecade.rfb.plugin.RunFromTheBeasPlugin</main.class>
+    <main.class>com.minecade.rfb.plugin.RunFromTheBeastPlugin</main.class>
   </properties>
 
   <dependencies>
