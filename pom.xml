@@ -1,0 +1,31 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.minecade</groupId>
+    <artifactId>minecade-build</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>../MinecadeEngine/pom.xml</relativePath>
+  </parent>
+  
+  <groupId>com.minecade.minecade-engine-parent</groupId>
+  <artifactId>minecade-run-from-the-beast</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <name>minecade-run-from-the-beast</name>
+  
+  <properties>
+    <minecade.engine.version>0.0.1-SNAPSHOT</minecade.engine.version>
+    <main.class>com.minecade.rfb.plugin.RunFromTheBeasPlugin</main.class>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.minecade</groupId>
+      <artifactId>minecade-engine</artifactId>
+      <version>${minecade.engine.version}</version>
+    </dependency>
+  </dependencies>
+  <build>
+    <finalName>${project.name}</finalName>
+  </build>
+</project>
