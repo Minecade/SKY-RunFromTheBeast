@@ -2,7 +2,7 @@ package com.minecade.rfb.data;
 
 import com.avaje.ebean.SqlUpdate;
 import com.minecade.engine.data.MinecadePersistence;
-import com.minecade.rfb.enums.ServerStateEnum;
+import com.minecade.rfb.enums.RFBStatus;
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
 
 public class RFBPersistence extends MinecadePersistence { 
@@ -47,10 +47,10 @@ public class RFBPersistence extends MinecadePersistence {
      *
      * @param serverState the server state
      */
-    public void updateServerStatus(ServerStateEnum serverState) {
+    public void updateServerStatus(RFBStatus serverState) {
         StringBuilder dml = new StringBuilder("update servers set state=:state ");
         
-        if(serverState == ServerStateEnum.RESTARTING) {
+        if(serverState == RFBStatus.RESTARTING) {
             dml.append(", online_players=:online_players ");
         }        
         
@@ -60,7 +60,7 @@ public class RFBPersistence extends MinecadePersistence {
                 .setParameter("state", serverState.toString())
                 .setParameter("id", getServerId());
         
-        if(serverState == ServerStateEnum.RESTARTING) {
+        if(serverState == RFBStatus.RESTARTING) {
             update.setParameter("online_players", 0);
         }
         
@@ -80,7 +80,7 @@ public class RFBPersistence extends MinecadePersistence {
 
         server.setMaxPlayers(plugin.getConfig().getInt("server.max-players"));
         server.setOnlinePlayers(0);
-        server.setState(ServerStateEnum.WAITING_FOR_PLAYERS);
+        server.setState(RFBStatus.WAITING_FOR_PLAYERS);
         
         // store the bean
         plugin.getDatabase().save(server);

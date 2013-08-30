@@ -1,6 +1,6 @@
 package com.minecade.rfb.enums;
 
-public enum ServerStateEnum {
+public enum RFBStatus {
     WAITING_FOR_PLAYERS,
     STARTING_MATCH,
     IN_PROGRESS, 

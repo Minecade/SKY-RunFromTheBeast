@@ -7,7 +7,7 @@ import javax.persistence.Enumerated;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
-import com.minecade.rfb.enums.ServerStateEnum;
+import com.minecade.rfb.enums.RFBStatus;
 
 // This class is an entity that should be persisted
 @Entity
@@ -21,7 +21,7 @@ public class ServerModel {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "state", nullable = false)
-    private ServerStateEnum state = ServerStateEnum.WAITING_FOR_PLAYERS;
+    private RFBStatus state = RFBStatus.WAITING_FOR_PLAYERS;
     
     @Column(name = "max_players", nullable = false)
     private int maxPlayers;
@@ -46,14 +46,14 @@ public class ServerModel {
     /**
      * @return the state
      */
-    public ServerStateEnum getState() {
+    public RFBStatus getState() {
         return state;
     }
 
     /**
      * @param state the state to set
      */
-    public void setState(ServerStateEnum state) {
+    public void setState(RFBStatus state) {
         this.state = state;
     }
 

@@ -13,11 +13,12 @@ import com.minecade.engine.command.CommandFactory;
 import com.minecade.rfb.data.RFBPersistence;
 import com.minecade.rfb.listener.RFBListener;
 import com.minecade.rfb.worlds.RFBLobbyWorld;
+import com.minecade.rfb.worlds.RFBWorld;
 
 public class RunFromTheBeastPlugin extends MinecadePlugin {
 
     private MinecadeWorld lobby;
-    private List<MinecadeWorld> infectedWorlds = new ArrayList<MinecadeWorld>();
+    private List<MinecadeWorld> runFromTheBestWorlds = new ArrayList<MinecadeWorld>();
     
     private static final String BUTTERSLAP_COMMANDS_PACKAGE = "com.minecade.bs.command";
     
@@ -32,7 +33,7 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
      * @return
      */
     public MinecadeWorld getRandomWorld() {
-        return infectedWorlds.get(getRandom().nextInt(infectedWorlds.size()));
+        return runFromTheBestWorlds.get(getRandom().nextInt(runFromTheBestWorlds.size()));
     }
     
     /**
@@ -62,12 +63,9 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
         // Initialize Worlds
         getLogger().info("onEnable: Creating Worlds...");
         lobby = new RFBLobbyWorld(this);
-        /*
-        infectedWorlds.add(new LastStandWorld(this));
-        infectedWorlds.add(new ButteryLolipopsWorld(this));
-        infectedWorlds.add(new KingOfTheButterWorld(this));
-        infectedWorlds.add(new GumDropsWorld(this));
-        infectedWorlds.add(new TNTAsteroids(this));*/
+        
+        runFromTheBestWorlds.add(new RFBWorld(this));
+
         getLogger().info("onEnable: Worlds Created...");
         
         // Create or update server status in DB.

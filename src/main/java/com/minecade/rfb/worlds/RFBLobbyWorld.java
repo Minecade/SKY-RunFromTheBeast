@@ -9,5 +9,5 @@ public class RFBLobbyWorld extends MinecadeWorld {
         super("Run From The Beast Lobby", "runfrombeastlobby", plugin);
         // player v.s player enable
         world.setPVP(false);
-    } 
+    }
 }
