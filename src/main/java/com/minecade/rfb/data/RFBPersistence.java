@@ -1,7 +1,12 @@
 package com.minecade.rfb.data;
 
+import java.util.Date;
+
 import com.avaje.ebean.SqlUpdate;
+import com.minecade.engine.data.MinecadeAccount;
 import com.minecade.engine.data.MinecadePersistence;
+import com.minecade.rfb.engine.RFBPlayer;
+import com.minecade.rfb.data.PlayerModel;
 import com.minecade.rfb.enums.RFBStatus;
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
 
@@ -41,6 +46,41 @@ public class RFBPersistence extends MinecadePersistence {
                 .setParameter("id", getServerId());
         update.execute();
     }
+    
+    /**
+     * Gets the player by name.
+     * @param playerName
+     * @author kvnamo
+     */
+    public void getPlayer(RFBPlayer player){
+        // Find player in database
+        PlayerModel playerModel = this.plugin.getDatabase().find(PlayerModel.class)
+            .where().eq("username", player.getBukkitPlayer().getName()).findUnique();
+        
+        // Creates a new bean that is managed by bukkit
+        if(playerModel == null){ 
+            playerModel = this.plugin.getDatabase().createEntityBean(PlayerModel.class);
+            playerModel.setUsername(player.getBukkitPlayer().getName());  
+            playerModel.setWins(0);
+            playerModel.setLosses(0);
+            playerModel.setTimePlayed(0); 
+            playerModel.setLastSeen((new Date()));  
+            
+            // Stores the bean
+            this.plugin.getDatabase().save(playerModel);
+        }
+        
+        MinecadeAccount account = getMinecadeAccount(player.getBukkitPlayer().getName());
+        
+        if(account != null) {
+            playerModel.setAdmin(account.isAdmin());
+            playerModel.setCm(account.isCm());
+            playerModel.setGm(account.isGm());
+            playerModel.setVip(account.isVip());
+        }
+
+        player.setPlayerModel(playerModel);
+    }
 
     /**
      * Update server players.
@@ -65,6 +105,15 @@ public class RFBPersistence extends MinecadePersistence {
         }
         
         update.execute();        
+    }
+    
+    /**
+     * Update player
+     * @param playerModel
+     * @author jdgil
+     */
+    public void updatePlayer(PlayerModel playerModel){
+        this.plugin.getDatabase().update(playerModel);
     }
 
     /**
