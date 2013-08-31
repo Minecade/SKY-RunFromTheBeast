@@ -321,7 +321,9 @@ public class RFBMatch {
      */
     public void playerDeath(PlayerDeathEvent event) {
         this.gameOver();
-//        if(event.)
+        if(event.getEntity().getName().compareTo(beast.getBukkitPlayer().getName()) == 0){
+            
+        }
     }
     
     /**
