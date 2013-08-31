@@ -22,7 +22,7 @@ server:
 match:
     ban-message: 'You have been banned from sky servers. Appeal at http://sky-sg.net/'
     lobby-world-name: 'RFBLobbyWorld'
-    time: 30# Match duration time in seconds.
+    time: 80 # Match duration time in seconds.
     start-countdown: 10 # The time in seconds to wait when the MATCH_PLAYERS limit reached to start the match.
     ready-countdown: 5 # The time to wait until all users are ready to start the match.
     required-players: 1 # Minimun Players needed to start the match.
