@@ -12,7 +12,9 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
@@ -193,6 +195,7 @@ public class RFBMatch {
         plugin.getPersistence().updateServerStatus(this.status);
 
         this.rfbScoreboard.setMatchPlayers(this.players.size());
+
         this.timeLeft = this.time;
         this.timerTask = new TimerTask(this, this.timeLeft, false, false, false);
         this.timerTask.runTaskTimer(plugin, 11, 20l);
@@ -313,7 +316,7 @@ public class RFBMatch {
         }
         event.setCancelled(true);
     }
-    
+
     /**
      * Call when a entity damager
      * @param EntityDamageEvent.
@@ -389,34 +392,10 @@ public class RFBMatch {
     }
     
     /**
-     * Required starting players
-     * @author kvnamo
+     * Show player.
+     *
+     * @param bukkitPlayer the bukkit player
      */
-    private boolean startingPlayers() {
-        
-        if(this.players.size() < this.requiredPlayers){
-
-            for(RFBPlayer player : this.spectators.values()){
-                // Add spectator to players list
-                this.players.put(player.getBukkitPlayer().getName(), player);
-                this.spectators.remove(player.getBukkitPlayer().getName());
-                
-                // Show player
-                this.showPlayer(player.getBukkitPlayer());
-                
-                // Send player to spawn location
-                player.getBukkitPlayer().setFlying(false);
-                player.getBukkitPlayer().teleport(this.arena == null ? lobbyLocation : this.arena.getRandomSpawn());
-                player.getBukkitPlayer().sendMessage(String.format("%sYou are now playing the game!", ChatColor.YELLOW));
-                
-                // Check if more spectators are needed
-                if(this.players.size() == this.requiredPlayers) return true; 
-            }
-        }
-        
-        return false;
-    }
-    
     private void showPlayer(Player bukkitPlayer){
         for (RFBPlayer player : this.players.values()) {
             player.getBukkitPlayer().showPlayer(bukkitPlayer);
@@ -450,5 +429,107 @@ public class RFBMatch {
 
             event.setCancelled(true);
         }
+    }
+
+    /**
+     * Required starting players
+     * @author kvnamo
+     */
+    private boolean startingPlayers() {
+
+        if (this.players.size() < this.requiredPlayers) {
+            synchronized (this.players) {
+                for (RFBPlayer player : this.spectators.values()) {
+                    // Add spectator to players list
+                    this.players.put(player.getBukkitPlayer().getName(), player);
+                    this.spectators.remove(player.getBukkitPlayer().getName());
+
+                    // Show player
+                    this.showPlayer(player.getBukkitPlayer());
+
+                    // Send player to spawn location
+                    player.getBukkitPlayer().setFlying(false);
+                    player.getBukkitPlayer().teleport(this.arena == null ? lobbyLocation : this.arena.getRandomSpawn());
+                    player.getBukkitPlayer().sendMessage(String.format("%sYou are now playing the game!", ChatColor.YELLOW));
+
+                    // Check if more spectators are needed
+                    if (this.players.size() == this.requiredPlayers)
+                        return true;
+                }
+            }
+        }
+
+        return false;
+    }
+    
+    /**
+     * Call when a entity damager
+     * @param EntityDamageEvent.
+     * @author kvnamo
+     */
+    public void entityDamage(EntityDamageEvent event) {
+        if(DamageCause.VOID.equals(event.getCause()) && event.getEntity() instanceof Player){
+            final Player bukkitPlayer = (Player)event.getEntity();
+            
+            switch (this.status) {
+                case IN_PROGRESS:
+                    final RFBPlayer player = this.players.get(bukkitPlayer.getName());
+                    if(player != null){
+                        // Remove dead player from the players list and add him to spectators list
+                        this.players.remove(bukkitPlayer.getName());
+                        this.hidePlayer(bukkitPlayer);
+                        this.spectators.put(bukkitPlayer.getName(), player);
+                        
+                        // Save stats in database
+                        player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+                        player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+                        this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
+    
+                        bukkitPlayer.teleport(this.arena.getRandomSpawn());
+                        bukkitPlayer.sendMessage(String.format("%s You are now spectating the game.", ChatColor.YELLOW));
+                        this.broadcastMessage(String.format("%s[%s] %slost.", ChatColor.RED, bukkitPlayer.getName(), ChatColor.GRAY));
+    
+                        this.rfbScoreboard.setMatchPlayers(this.players.size());
+                        this.gameOver();
+                    }
+                    break;
+                case RESTARTING:
+                    bukkitPlayer.kickPlayer("Server stop.");
+                    break;    
+                case STARTING_MATCH:
+                case WAITING_FOR_PLAYERS:
+                    bukkitPlayer.teleport(lobbyLocation);
+                    break;
+                default:
+                    break;    
+            }               
+        }
+        
+        event.setCancelled(true);
+    }
+    
+    /**
+     * When player chats
+     * @param player
+     * @author kvnamo
+     */
+    public void chatMessage(AsyncPlayerChatEvent event) {
+        final RFBPlayer player = this.players.get(event.getPlayer().getName());
+
+        // Spectators are not allowed to send messages.
+        if(player == null){
+            event.getPlayer().sendMessage(String.format("%sOnly live players can send messages.", ChatColor.GRAY));
+            event.setCancelled(true);
+            return;
+        }
+
+        // Last message.
+        if(StringUtils.isNotBlank(player.getLastMessage()) && player.getLastMessage().equals(event.getMessage().toLowerCase())){
+            event.getPlayer().sendMessage(String.format("%sPlease don't send the same message multiple times!", ChatColor.GRAY));
+            event.setCancelled(true);
+        }
+
+        player.setLastMessage(event.getMessage().toLowerCase());
+        event.setFormat(player.getTag().getPrefix() + ChatColor.WHITE + "%s" + ChatColor.GRAY + ": %s");
     }
 }

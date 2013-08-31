@@ -6,9 +6,12 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.entity.ItemSpawnEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.world.WorldInitEvent;
@@ -42,18 +45,23 @@ public class RFBListener implements Listener {
         this.plugin.getServer().getLogger().info("onWorldInit");
     }
     
+    /**
+     * Called by PlayerJoinEvent when player joins the match.
+     * @param playerJoinEvent
+     * @author: jdgil
+     */
     @EventHandler
-    public void onPlayerGameModeChange(PlayerGameModeChangeEvent event) {
-        if (!event.getPlayer().isOp() && GameMode.CREATIVE.equals(event.getNewGameMode())) {
-            event.setCancelled(true);
-        }
-        this.plugin.getServer().getLogger().info("onPlayerGameModeChange");
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        // Remove join message.
+        event.setJoinMessage(null);
+        this.match.playerJoin(event);
+        this.plugin.getServer().getLogger().info("onPlayerJoin");
     }
     
     /**
      * Called by PlayerQuitEvent when player exits the match.
      * @param playerQuitEvent
-     * @author jdgil
+     * @author kvnamo
      */
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event){
@@ -69,32 +77,8 @@ public class RFBListener implements Listener {
      * @author victorv, kvnamo
      */
     @EventHandler
-    public void onPlayerDeath(PlayerDeathEvent event) {
-        this.match.playerDeath(event);
-        this.plugin.getServer().getLogger().info("onPlayerDeath");
-    }
-    
-    /**
-     * Call when a block breaks.
-     * @param event
-     * @author: jdgil
-     */
-    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = false)
-    public void onBlockBreak(BlockBreakEvent event) {
-        this.match.blockBreak(event);
-    }
-    
-    /**
-     * Called by PlayerJoinEvent when player joins the match.
-     * @param playerJoinEvent
-     * @author: jdgil
-     */
-    @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        // Remove join message.
-        event.setJoinMessage(null);
-        this.match.playerJoin(event);
-        this.plugin.getServer().getLogger().info("onPlayerJoin");
+    public void onEntityDamage(final EntityDamageEvent event) {
+        this.match.entityDamage(event);
     }
     
     /**
@@ -108,5 +92,66 @@ public class RFBListener implements Listener {
             this.match.superJump(event);
         }
         this.plugin.getServer().getLogger().info("onSuperJump");
+    }
+    
+    /** 
+     * Call by AsyncPlayerChatEvent on player chat
+     * @param event
+     * @author kvnamo
+     */
+    @EventHandler
+    public void onPlayerChat(AsyncPlayerChatEvent event) {
+        this.match.chatMessage(event);
+        this.plugin.getServer().getLogger().info("onPlayerChat");
+    }
+    
+    @EventHandler
+    public void onPlayerGameModeChange(PlayerGameModeChangeEvent event) {
+        if (!event.getPlayer().isOp() && GameMode.CREATIVE.equals(event.getNewGameMode())) {
+            event.setCancelled(true);
+        }
+        this.plugin.getServer().getLogger().info("onPlayerGameModeChange");
+    }
+    
+    /**
+     * Call when a block breaks.
+     * @param event
+     * @author kvnamo
+     */
+    @EventHandler
+    public void onPlayerKick(PlayerKickEvent event) {
+        event.setLeaveMessage(null);
+    }
+    
+    /**
+     * Calls when an item spawns on the ground.
+     * 
+     * @param event
+     * @author kvnamo
+     */
+    @EventHandler
+    public void onItemSpawn(ItemSpawnEvent event) {
+        event.setCancelled(true);
+    }
+    
+    /**
+     * Calls when an item is dropped.
+     * 
+     * @param event
+     * @author kvnamo
+     */
+    @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent event) {
+        event.setCancelled(true);
+        }
+    
+    /**
+     * Call when a block breaks.
+     * @param event
+     * @author: jdgil
+     */
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = false)
+    public void onBlockBreak(BlockBreakEvent event) {
+        this.match.blockBreak(event);
     }
 }

@@ -28,4 +28,28 @@
   <build>
     <finalName>${project.name}</finalName>
   </build>
+  
+    <profiles>
+      <profile>
+            <id>dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <database.url>jdbc:mysql://localhost:3306/sky_network</database.url>
+                <database.username>root</database.username>
+                <database.password>root</database.password>
+                <log4j.rootLogger>INFO, DB, stdout</log4j.rootLogger>
+            </properties>
+        </profile>
+        <profile>
+            <id>pro</id>
+            <properties>
+                <database.url>jdbc:mysql://172.23.24.95:3306/sky_network</database.url>
+                <database.username>runbeast</database.username>
+                <database.password>hrg2mTGy2JAh</database.password>
+                <log4j.rootLogger>WARN, DB, stdout</log4j.rootLogger>
+            </properties>
+        </profile>
+    </profiles>
 </project>
