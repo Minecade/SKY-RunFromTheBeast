@@ -79,12 +79,13 @@ public class RFBListener implements Listener {
     @EventHandler
     public void onEntityDamage(final EntityDamageEvent event) {
         this.match.entityDamage(event);
+        this.plugin.getServer().getLogger().info("onEntityDamage");
     }
     
     /**
      * Call by PlayerToggleFlightEvent on flight attempt
      * @param event
-     * @author kvnamo
+     * @author jdgil
      */
     @EventHandler
     public void onFlightAttempt(PlayerToggleFlightEvent event) { 

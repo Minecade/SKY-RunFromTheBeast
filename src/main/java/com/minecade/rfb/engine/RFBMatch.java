@@ -11,6 +11,7 @@ import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.PlayerDeathEvent;
@@ -324,56 +325,68 @@ public class RFBMatch {
      */
     public void playerDeath(PlayerDeathEvent event) {
         final Player bukkitPlayer = (Player)event.getEntity();
-        final RFBPlayer player = this.players.get(bukkitPlayer.getName());
-        if(player != null){
-            //if death player is the beast
-            if(player.getBukkitPlayer().getName().equalsIgnoreCase(beast.getBukkitPlayer().getName())){
-                synchronized (this.players) {
-                    for (RFBPlayer playerMatch : this.players.values()) {
-                        //Save Stats for winners: Runners
-                        playerMatch.getPlayerModel().setWins(playerMatch.getPlayerModel().getWins() + 1);
-                        playerMatch.getPlayerModel().setTimePlayed(playerMatch.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                        this.plugin.getPersistence().updatePlayer(playerMatch.getPlayerModel());
+        switch (this.status) {
+            case IN_PROGRESS:
+                final RFBPlayer player = this.players.get(bukkitPlayer.getName());
+                if(player != null){
+                    //if death player is the beast
+                    if(player.getBukkitPlayer().getName().equalsIgnoreCase(beast.getBukkitPlayer().getName())){
+                        synchronized (this.players) {
+                            for (RFBPlayer playerMatch : this.players.values()) {
+                                //Save Stats for winners: Runners
+                                playerMatch.getPlayerModel().setWins(playerMatch.getPlayerModel().getWins() + 1);
+                                playerMatch.getPlayerModel().setTimePlayed(playerMatch.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+                                this.plugin.getPersistence().updatePlayer(playerMatch.getPlayerModel());
+                                
+                                // Get winners: All runners alive.
+                                this.winners = StringUtils.isBlank(this.winners) ? playerMatch.getBukkitPlayer().getName() : this.winners + ", "
+                                        + playerMatch.getBukkitPlayer().getName();
+                                
+                                // Throw fireworks for winner
+                                new FireworksTask(playerMatch.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
+                            }
+                            
+                            // Save stats in database for the loser: Beast.
+                            beast.getPlayerModel().setLosses(beast.getPlayerModel().getLosses() + 1);
+                            beast.getPlayerModel().setTimePlayed(beast.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+                            this.plugin.getPersistence().updatePlayer(beast.getPlayerModel());
+                        }
                         
-                        // Get winners: All runners alive.
-                        this.winners = StringUtils.isBlank(this.winners) ? playerMatch.getBukkitPlayer().getName() : this.winners + ", "
-                                + playerMatch.getBukkitPlayer().getName();
+                        this.timerTask.cancel();
+                        this.timeLeft = 10;
+                        new TimerTask(this, this.timeLeft, false, false, true).runTaskTimer(this.plugin, 11, 20l);
+                    }else {
+                        //Death is a runner
+                        // Remove dead player from the players list and add him to spectators list
+                        this.players.remove(player.getBukkitPlayer().getName());
+                        this.hidePlayer(player.getBukkitPlayer());
+                        this.spectators.put(player.getBukkitPlayer().getName(), player);
                         
-                        // Throw fireworks for winner
-                        new FireworksTask(playerMatch.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
+                        // Save stats in database
+                        player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+                        player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+                        this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
+                        
+                        player.getBukkitPlayer().teleport(this.arena.getRandomSpawn());
+                        player.getBukkitPlayer().sendMessage(String.format("%s You are now spectating the game.", ChatColor.YELLOW));
+                        this.broadcastMessage(String.format("%s[%s] %slost.", ChatColor.RED, player.getBukkitPlayer().getName(), ChatColor.DARK_GRAY));
+                        
+                        this.rfbScoreboard.setMatchPlayers(this.players.size());
+                        this.gameOver();
                     }
                     
-                    // Save stats in database for the loser: Beast.
-                    beast.getPlayerModel().setLosses(beast.getPlayerModel().getLosses() + 1);
-                    beast.getPlayerModel().setTimePlayed(beast.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                    this.plugin.getPersistence().updatePlayer(beast.getPlayerModel());
                 }
-                
-                this.timerTask.cancel();
-                this.timeLeft = 10;
-                new TimerTask(this, this.timeLeft, false, false, true).runTaskTimer(this.plugin, 11, 20l);
-            }else {
-                //Death is a runner
-                // Remove dead player from the players list and add him to spectators list
-                this.players.remove(player.getBukkitPlayer().getName());
-                this.hidePlayer(player.getBukkitPlayer());
-                this.spectators.put(player.getBukkitPlayer().getName(), player);
-                
-                // Save stats in database
-                player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
-                player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-                
-                player.getBukkitPlayer().teleport(this.arena.getRandomSpawn());
-                player.getBukkitPlayer().sendMessage(String.format("%s You are now spectating the game.", ChatColor.YELLOW));
-                this.broadcastMessage(String.format("%s[%s] %slost.", ChatColor.RED, player.getBukkitPlayer().getName(), ChatColor.DARK_GRAY));
-                
-                this.rfbScoreboard.setMatchPlayers(this.players.size());
-                this.gameOver();
-            }
-            
+                break;
+            case RESTARTING:
+                bukkitPlayer.kickPlayer("Server stop.");
+                break;    
+            case STARTING_MATCH:
+            case WAITING_FOR_PLAYERS:
+                bukkitPlayer.teleport(lobbyLocation);
+                break;
+            default:
+                break;
         }
-            
     }
     
     /**
@@ -489,10 +502,14 @@ public class RFBMatch {
      * @author kvnamo
      */
     public void entityDamage(EntityDamageEvent event) {
-        if(DamageCause.VOID.equals(event.getCause()) && event.getEntity() instanceof Player){
-            final Player bukkitPlayer = (Player)event.getEntity();
-            
-            switch (this.status) {
+        Player bukkitPlayer;
+        //the entity damaged was a player
+        if(event.getEntity() instanceof Player){
+            //the cause was a fall to void
+            bukkitPlayer = (Player)event.getEntity();
+            switch (event.getCause()){
+            case VOID:
+                switch (this.status) {
                 case IN_PROGRESS:
                     final RFBPlayer player = this.players.get(bukkitPlayer.getName());
                     if(player != null){
@@ -505,11 +522,11 @@ public class RFBMatch {
                         player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
                         player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
                         this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-    
+                        
                         bukkitPlayer.teleport(this.arena.getRandomSpawn());
                         bukkitPlayer.sendMessage(String.format("%s You are now spectating the game.", ChatColor.YELLOW));
                         this.broadcastMessage(String.format("%s[%s] %slost.", ChatColor.RED, bukkitPlayer.getName(), ChatColor.GRAY));
-    
+                        
                         this.rfbScoreboard.setMatchPlayers(this.players.size());
                         this.gameOver();
                     }
@@ -522,11 +539,23 @@ public class RFBMatch {
                     bukkitPlayer.teleport(lobbyLocation);
                     break;
                 default:
-                    break;    
-            }               
+                    break;
+                }
+                break;
+            case ENTITY_ATTACK:
+                Player bukkitDamager = (Player)((EntityDamageByEntityEvent) event).getDamager();
+                RFBPlayer attackVictim = this.players.get(bukkitPlayer.getName());
+                RFBPlayer attackDamager = this.players.get(bukkitDamager.getName());
+                if(!(attackVictim.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName())) 
+                        && !(attackDamager.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))){
+                    event.setCancelled(true);
+                }
+                break;
+            default:
+                break;
+            
+            }
         }
-        
-        event.setCancelled(true);
     }
     
     /**
