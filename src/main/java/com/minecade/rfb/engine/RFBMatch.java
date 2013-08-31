@@ -157,7 +157,7 @@ public class RFBMatch {
         synchronized (this.players) {
 
             // Set random beast.
-            beast = players.get(plugin.getRandom().nextInt(players.size()));
+            beast = (RFBPlayer) players.values().toArray()[plugin.getRandom().nextInt(players.size())];
             beast.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getBeastSpawnLocation());
             beast.getBukkitPlayer().sendMessage("You are the BEAST, pickup items in the chest!");
 

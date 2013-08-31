@@ -14,7 +14,8 @@ public class HaloRaceWorld extends RFBBaseWorld {
 
     public HaloRaceWorld(MinecadePlugin plugin) {
         
-        super("RFBWorld", "RFBWorld", plugin);
+        super("HaloRaceWorld", "HaloRaceWorld", plugin);
+        
         // player v.s player enable
         world.setPVP(true);
         
