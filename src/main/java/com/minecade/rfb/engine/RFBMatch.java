@@ -202,7 +202,7 @@ public class RFBMatch {
         this.timerTask = new TimerTask(this, this.timeLeft, false, false, false);
         this.timerTask.runTaskTimer(plugin, 11, 20l);
 
-        //this.gameOver();
+        this.gameOver();
         this.broadcastMessage(String.format("%sMatch started!", ChatColor.RED));
     }
 
