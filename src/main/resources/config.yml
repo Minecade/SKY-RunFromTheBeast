@@ -27,6 +27,7 @@ match:
     ready-countdown: 10 # The time to wait until all users are ready to start the match.
     required-players: 1 # Minimun Players needed to start the match.
     server-full-message: 'The server if full, visit sky-sg.net/shop to purchase VIP!'
+    
 # Lobby
 lobby:
     spawn:

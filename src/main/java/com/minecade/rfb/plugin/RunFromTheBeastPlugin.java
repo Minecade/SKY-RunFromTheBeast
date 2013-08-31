@@ -13,7 +13,7 @@ import com.minecade.engine.command.CommandFactory;
 import com.minecade.rfb.data.RFBPersistence;
 import com.minecade.rfb.listener.RFBListener;
 import com.minecade.rfb.worlds.RFBLobbyWorld;
-import com.minecade.rfb.worlds.RFBWorld;
+import com.minecade.rfb.worlds.HaloRaceWorld;
 
 public class RunFromTheBeastPlugin extends MinecadePlugin {
 
@@ -64,7 +64,7 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
         getLogger().info("onEnable: Creating Worlds...");
         lobby = new RFBLobbyWorld(this);
         
-        runFromTheBestWorlds.add(new RFBWorld(this));
+        runFromTheBestWorlds.add(new HaloRaceWorld(this));
 
         getLogger().info("onEnable: Worlds Created...");
         

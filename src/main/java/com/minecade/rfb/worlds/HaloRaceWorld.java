@@ -5,15 +5,14 @@ package com.minecade.rfb.worlds;
 
 import com.minecade.engine.MapLocation;
 import com.minecade.engine.MinecadePlugin;
-import com.minecade.engine.MinecadeWorld;
 
 /**
  * @author Jdgil
  *
  */
-public class RFBWorld extends MinecadeWorld{
+public class HaloRaceWorld extends RFBBaseWorld {
 
-    public RFBWorld(MinecadePlugin plugin) {
+    public HaloRaceWorld(MinecadePlugin plugin) {
         
         super("RFBWorld", "RFBWorld", plugin);
         // player v.s player enable
@@ -25,6 +24,7 @@ public class RFBWorld extends MinecadeWorld{
         addLocation(new MapLocation(540, 5, -874));
         addLocation(new MapLocation(540, 5, -876));
         
+        setBeastSpawnLocation(new MapLocation(459, 4, -915));
     }
 
 }

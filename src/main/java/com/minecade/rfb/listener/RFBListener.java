@@ -7,6 +7,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.world.WorldInitEvent;
 
 import com.minecade.rfb.engine.RFBMatch;
@@ -67,5 +68,18 @@ public class RFBListener implements Listener {
         event.setJoinMessage(null);
         this.match.playerJoin(event);
         this.plugin.getServer().getLogger().info("onPlayerJoin");
+    }
+    
+    /**
+     * Call by PlayerToggleFlightEvent on flight attempt
+     * @param event
+     * @author kvnamo
+     */
+    @EventHandler
+    public void onFlightAttempt(PlayerToggleFlightEvent event) { 
+        if(!GameMode.CREATIVE.equals(event.getPlayer().getGameMode())){
+            this.match.superJump(event);
+        }
+        this.plugin.getServer().getLogger().info("onSuperJump");
     }
 }
