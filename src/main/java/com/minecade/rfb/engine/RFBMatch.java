@@ -17,7 +17,6 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.world.WorldInitEvent;
 
 import com.minecade.engine.MinecadeWorld;
@@ -25,7 +24,6 @@ import com.minecade.engine.task.FireworksTask;
 import com.minecade.engine.utils.EngineUtils;
 import com.minecade.rfb.enums.RFBStatus;
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
-import com.minecade.rfb.task.SuperJumpTask;
 import com.minecade.rfb.task.TimerTask;
 import com.minecade.rfb.worlds.RFBBaseWorld;
 
@@ -88,6 +86,7 @@ public class RFBMatch {
      */
     public void playerJoin(PlayerJoinEvent event) {
         final Player bukkitPlayer = event.getPlayer();
+        bukkitPlayer.setAllowFlight(false);
 
         // Player banned
         if (this.plugin.getPersistence().isPlayerBanned(bukkitPlayer.getName())) {
@@ -109,11 +108,6 @@ public class RFBMatch {
         bukkitPlayer.setScoreboard(this.rfbScoreboard.getScoreboard());
 
         if (RFBStatus.WAITING_FOR_PLAYERS.equals(this.status)) {
-            // If player is spectator or OP or VIP let it fly
-            if (bukkitPlayer.isOp() || player.getPlayerModel().isVip()) {
-                bukkitPlayer.setAllowFlight(true);
-            }
-
             this.players.put(bukkitPlayer.getName(), player);
             this.rfbScoreboard.setMatchPlayers(this.players.size());
 
@@ -136,14 +130,12 @@ public class RFBMatch {
 
             if (player.getPlayerModel().isVip()) {
                 // player.loadInventoy();
-                bukkitPlayer.setAllowFlight(true);
                 this.players.put(bukkitPlayer.getName(), player);
 
                 this.rfbScoreboard.setMatchPlayers(this.players.size());
             } else if (plugin.getPersistence().isPlayerStaff(bukkitPlayer)) {
                 // player.loadInventoy();
                 this.hidePlayer(bukkitPlayer);
-                bukkitPlayer.setAllowFlight(true);
                 this.spectators.put(bukkitPlayer.getName(), player);
             } else {
                 bukkitPlayer.kickPlayer(plugin.getConfig().getString("match.server-full-message"));
@@ -173,7 +165,6 @@ public class RFBMatch {
 
             for (RFBPlayer player : this.players.values()) {
                 if (!player.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
-                    player.getBukkitPlayer().setAllowFlight(true);
                     EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
                     player.getBukkitPlayer().teleport(this.arena.getRandomSpawn());
                 }
@@ -447,31 +438,6 @@ public class RFBMatch {
 
         for (RFBPlayer player : this.spectators.values()) {
             player.getBukkitPlayer().showPlayer(bukkitPlayer);
-        }
-    }
-
-    /**
-     * Super jump
-     * 
-     * @param PlayerToggleFlightEvent
-     * @author jdgil
-     */
-    public void superJump(PlayerToggleFlightEvent event) {
-        final Player bukkitPlayer = event.getPlayer();
-        final RFBPlayer player = this.players.get(bukkitPlayer.getName());
-
-        if (player != null) {
-            if (!player.isInAir() && (RFBStatus.IN_PROGRESS.equals(this.status) || player.getPlayerModel().isVip())) {
-                player.setInAir(true);
-                bukkitPlayer.playSound(bukkitPlayer.getLocation(), Sound.IRONGOLEM_THROW, 5, -5);
-                bukkitPlayer.setVelocity(bukkitPlayer.getLocation().getDirection().multiply(0.15).setY(1.4));
-
-                new SuperJumpTask(player).runTaskTimer(this.plugin, 11, 5);
-            } else {
-                bukkitPlayer.setVelocity(bukkitPlayer.getVelocity());
-            }
-
-            event.setCancelled(true);
         }
     }
 

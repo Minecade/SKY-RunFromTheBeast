@@ -7,13 +7,13 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.world.WorldInitEvent;
 
 import com.minecade.rfb.engine.RFBMatch;
@@ -82,19 +82,6 @@ public class RFBListener implements Listener {
         this.plugin.getServer().getLogger().info("onEntityDamage");
     }
     
-    /**
-     * Call by PlayerToggleFlightEvent on flight attempt
-     * @param event
-     * @author jdgil
-     */
-    @EventHandler
-    public void onFlightAttempt(PlayerToggleFlightEvent event) { 
-        if(!GameMode.CREATIVE.equals(event.getPlayer().getGameMode())){
-            this.match.superJump(event);
-        }
-        this.plugin.getServer().getLogger().info("onSuperJump");
-    }
-    
     /** 
      * Call by AsyncPlayerChatEvent on player chat
      * @param event
@@ -154,5 +141,18 @@ public class RFBListener implements Listener {
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = false)
     public void onBlockBreak(BlockBreakEvent event) {
         this.match.blockBreak(event);
+    }
+    
+    /**
+     * Called by PlayerDeathEvent when player dies
+     * @param playerDeathEvent
+     * @author kvnamo
+     */
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = false)
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        // Remove quit message.
+        event.setDeathMessage(null);
+        this.match.playerDeath(event);
+        plugin.getServer().getLogger().info(String.format("onPlayerDeath - Player: [%s]", event.getEntity()));
     }
 }
