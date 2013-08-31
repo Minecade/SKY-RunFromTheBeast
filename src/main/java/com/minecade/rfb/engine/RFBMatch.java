@@ -12,6 +12,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.WorldInitEvent;
 
 import com.minecade.engine.MinecadeWorld;
@@ -63,10 +64,11 @@ public class RFBMatch {
             this.plugin.getServer().getLogger().severe("RFBMatch initWorld: world parameter is null");
             return;
         }
-
+        this.plugin.getServer().getLogger().info(String.format("initworld.this.lobbyLocation %s", this.lobbyLocation));
         // if the map is the lobby
         if (plugin.getConfig().getString("match.lobby-world-name").equalsIgnoreCase(world.getName())) {
             this.lobbyLocation = EngineUtils.locationFromConfig(this.plugin.getConfig(), world, "lobby.spawn");
+            this.plugin.getServer().getLogger().info(String.format("initworld.this.lobbyLocation %s", this.lobbyLocation));
             world.setSpawnLocation(this.lobbyLocation.getBlockX(), this.lobbyLocation.getBlockY(), this.lobbyLocation.getBlockZ());
         }
     }
@@ -94,9 +96,13 @@ public class RFBMatch {
         final RFBPlayer player = new RFBPlayer(this.plugin, bukkitPlayer);
         EngineUtils.clearBukkitPlayer(bukkitPlayer);
         
+        // Setup scoreboard
+        this.rfbScoreboard.assignTeam(player);
+        bukkitPlayer.setScoreboard(this.rfbScoreboard.getScoreboard());
+        
         if(RFBStatus.WAITING_FOR_PLAYERS.equals(this.status)) {
-            // If player is spectator or OP or VIP let it fly
-            if(bukkitPlayer.isOp() || player.getPlayerModel().isVip()) {
+            // If player is spectator or OP
+            if(bukkitPlayer.isOp()) {
                 bukkitPlayer.setAllowFlight(true);
             }
 
@@ -109,9 +115,9 @@ public class RFBMatch {
                 // Update server status
                 this.status = RFBStatus.STARTING_MATCH;
                 plugin.getPersistence().updateServerStatus(this.status);
-
                 // Begin match start timer
                 this.timeLeft = this.timeLeft == 0 ? this.startCountdown : timeLeft;
+                this.plugin.getServer().getLogger().severe(String.format("Begin Match Soon, time left: %s", this.timeLeft));
                 this.timerTask = new TimerTask(this, this.timeLeft, true, false, false);
                 this.timerTask.runTaskTimer(this.plugin, 1l, 20l);
             }
@@ -122,10 +128,8 @@ public class RFBMatch {
         } else if(this.players.size() < this.maxPlayers){
             
             if(player.getPlayerModel().isVip()){
-                //player.loadInventoy();      
-                bukkitPlayer.setAllowFlight(true);
-                this.players.put(bukkitPlayer.getName(), player);
-                
+                //player.loadInventoy();
+                this.players.put(bukkitPlayer.getName(), player);                
                 this.rfbScoreboard.setMatchPlayers(this.players.size());
             }
             else if (plugin.getPersistence().isPlayerStaff(bukkitPlayer)) {
@@ -139,6 +143,11 @@ public class RFBMatch {
                 return;
             }
         }
+        
+        //Teleport to match location
+        this.plugin.getServer().getLogger().info(String.format("this.arena %s", this.arena));
+        this.plugin.getServer().getLogger().info(String.format("this.lobbyLocation %s", this.lobbyLocation));
+        bukkitPlayer.teleport(this.arena == null ? this.lobbyLocation : this.arena.getRandomSpawn()); 
     }
     
     /**
@@ -147,7 +156,7 @@ public class RFBMatch {
      */
     public void initMatch() {
         this.arena = plugin.getRandomWorld(); 
-
+        this.plugin.getServer().getLogger().info(String.format("RFBMatch.initMatch, arena %s", arena.getName()));
         synchronized (this.players) {
             for (RFBPlayer player : this.players.values()) {
                 player.getBukkitPlayer().setAllowFlight(true);
@@ -167,6 +176,7 @@ public class RFBMatch {
      */
     public void startMatch(){
         // Update server status
+        this.plugin.getServer().getLogger().info(String.format("RFBMatch.startMatch"));
         this.status = RFBStatus.IN_PROGRESS;
         plugin.getPersistence().updateServerStatus(this.status);
         
@@ -185,6 +195,7 @@ public class RFBMatch {
      * @author kvnamo
      */
     public void stopGame(){
+        this.plugin.getServer().getLogger().info(String.format("RFBMatch.stopMatch"));
         // Update server status
         this.status = RFBStatus.RESTARTING;
         plugin.getPersistence().updateServerStatus(this.status);
@@ -205,9 +216,10 @@ public class RFBMatch {
     
     /**
      * Game over
-     * @author kvnamo
+     * @author jdgil
      */
     public void gameOver(){
+        this.plugin.getServer().getLogger().info(String.format("RFBMatch.gameOver"));
         // Finish the game if there is only one player or the match timer is cero
         if(this.players.size() <= 1 || this.timeLeft == 0){
             // Start finish timer
@@ -231,6 +243,81 @@ public class RFBMatch {
                     new FireworksTask(player.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
                 }
             }
+        }
+    }
+    
+    public void playerQuit(PlayerQuitEvent event) {
+        String playerName = event.getPlayer().getName();
+
+        final RFBPlayer player = this.players.get(playerName);
+        this.players.remove(playerName);
+
+        if (RFBStatus.STARTING_MATCH.equals(this.status)) {
+            // Check if starting players number is reached
+            if(this.startingPlayers()) return;
+                    
+            // Update server status
+            this.status = RFBStatus.WAITING_FOR_PLAYERS;
+            plugin.getPersistence().updateServerStatus(this.status);
+
+            // Cancel begin timer task
+            this.timerTask.cancel();
+        }
+        else if (RFBStatus.IN_PROGRESS.equals(this.status) && player != null) {
+            //Save player stats
+            player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+            player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+            this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
+            
+            this.broadcastMessage(String.format("%s[%s] %squit the game", ChatColor.RED, playerName, ChatColor.DARK_GRAY));
+            this.gameOver();
+        }
+        
+        // Update scoreboard
+        this.rfbScoreboard.setMatchPlayers(this.players.size());
+    }
+    
+    /**
+     * Required starting players
+     * @author kvnamo
+     */
+    private boolean startingPlayers() {
+        
+        if(this.players.size() < this.requiredPlayers){
+
+            for(RFBPlayer player : this.spectators.values()){
+                // Add spectator to players list
+                this.players.put(player.getBukkitPlayer().getName(), player);
+                this.spectators.remove(player.getBukkitPlayer().getName());
+                
+                // Show player
+                this.showPlayer(player.getBukkitPlayer());
+                
+                // Send player to spawn location
+                player.getBukkitPlayer().setFlying(false);
+                player.getBukkitPlayer().teleport(this.arena == null ? lobbyLocation : this.arena.getRandomSpawn());
+                player.getBukkitPlayer().sendMessage(String.format("%sYou are now playing the game!", ChatColor.YELLOW));
+                
+                // Check if more spectators are needed
+                if(this.players.size() == this.requiredPlayers) return true; 
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Show spectator 
+     * @param player
+     * @author jdgil
+     */
+    private void showPlayer(Player bukkitPlayer){
+        for (RFBPlayer player : this.players.values()) {
+            player.getBukkitPlayer().showPlayer(bukkitPlayer);
+        }
+        
+        for (RFBPlayer player : this.spectators.values()) {
+            player.getBukkitPlayer().showPlayer(bukkitPlayer);
         }
     }
     

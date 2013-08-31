@@ -15,7 +15,7 @@ public class RFBWorld extends MinecadeWorld{
 
     public RFBWorld(MinecadePlugin plugin) {
         
-        super("Run From The Beast World", "runfrombeastworld", plugin);
+        super("RFBWorld", "RFBWorld", plugin);
         // player v.s player enable
         world.setPVP(true);
         
