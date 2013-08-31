@@ -323,36 +323,57 @@ public class RFBMatch {
      * @author jdgil
      */
     public void playerDeath(PlayerDeathEvent event) {
-        this.gameOver();
-        if(event.getEntity().getName().equalsIgnoreCase(beast.getBukkitPlayer().getName())){
-            this.timerTask.cancel();
-            this.timeLeft = 10;
-            new TimerTask(this, this.timeLeft, false, false, true).runTaskTimer(this.plugin, 11, 20l);
-            
-            synchronized (this.players) {
-                for (RFBPlayer player : this.players.values()) {
-                    //Save Stats for winners: Runners
-                    player.getPlayerModel().setWins(player.getPlayerModel().getWins() + 1);
-                    player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                    this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-                
-                    // Get winners: All runners alive.
-                    this.winners = StringUtils.isBlank(this.winners) ? player.getBukkitPlayer().getName() : this.winners + ", "
-                            + player.getBukkitPlayer().getName();
-
-                    // Throw fireworks for winner
-                    new FireworksTask(player.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
+        final Player bukkitPlayer = (Player)event.getEntity();
+        final RFBPlayer player = this.players.get(bukkitPlayer.getName());
+        if(player != null){
+            //if death player is the beast
+            if(player.getBukkitPlayer().getName().equalsIgnoreCase(beast.getBukkitPlayer().getName())){
+                synchronized (this.players) {
+                    for (RFBPlayer playerMatch : this.players.values()) {
+                        //Save Stats for winners: Runners
+                        playerMatch.getPlayerModel().setWins(playerMatch.getPlayerModel().getWins() + 1);
+                        playerMatch.getPlayerModel().setTimePlayed(playerMatch.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+                        this.plugin.getPersistence().updatePlayer(playerMatch.getPlayerModel());
+                        
+                        // Get winners: All runners alive.
+                        this.winners = StringUtils.isBlank(this.winners) ? playerMatch.getBukkitPlayer().getName() : this.winners + ", "
+                                + playerMatch.getBukkitPlayer().getName();
+                        
+                        // Throw fireworks for winner
+                        new FireworksTask(playerMatch.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
+                    }
+                    
+                    // Save stats in database for the loser: Beast.
+                    beast.getPlayerModel().setLosses(beast.getPlayerModel().getLosses() + 1);
+                    beast.getPlayerModel().setTimePlayed(beast.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+                    this.plugin.getPersistence().updatePlayer(beast.getPlayerModel());
                 }
                 
-                // Save stats in database for the loser: Beast.
-                beast.getPlayerModel().setLosses(beast.getPlayerModel().getLosses() + 1);
-                beast.getPlayerModel().setTimePlayed(beast.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                this.plugin.getPersistence().updatePlayer(beast.getPlayerModel());
+                this.timerTask.cancel();
+                this.timeLeft = 10;
+                new TimerTask(this, this.timeLeft, false, false, true).runTaskTimer(this.plugin, 11, 20l);
+            }else {
+                //Death is a runner
+                // Remove dead player from the players list and add him to spectators list
+                this.players.remove(player.getBukkitPlayer().getName());
+                this.hidePlayer(player.getBukkitPlayer());
+                this.spectators.put(player.getBukkitPlayer().getName(), player);
+                
+                // Save stats in database
+                player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+                player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+                this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
+                
+                player.getBukkitPlayer().teleport(this.arena.getRandomSpawn());
+                player.getBukkitPlayer().sendMessage(String.format("%s You are now spectating the game.", ChatColor.YELLOW));
+                this.broadcastMessage(String.format("%s[%s] %slost.", ChatColor.RED, player.getBukkitPlayer().getName(), ChatColor.DARK_GRAY));
+                
+                this.rfbScoreboard.setMatchPlayers(this.players.size());
+                this.gameOver();
             }
-        }else {
-            //Death is a runner
             
         }
+            
     }
     
     /**
