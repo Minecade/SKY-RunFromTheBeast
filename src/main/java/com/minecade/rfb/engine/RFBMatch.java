@@ -11,7 +11,10 @@ import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.world.WorldInitEvent;
 
@@ -190,12 +193,11 @@ public class RFBMatch {
         plugin.getPersistence().updateServerStatus(this.status);
 
         this.rfbScoreboard.setMatchPlayers(this.players.size());
-
         this.timeLeft = this.time;
         this.timerTask = new TimerTask(this, this.timeLeft, false, false, false);
         this.timerTask.runTaskTimer(plugin, 11, 20l);
 
-        this.gameOver();
+        //this.gameOver();
         this.broadcastMessage(String.format("%sMatch started!", ChatColor.RED));
     }
 
@@ -311,12 +313,97 @@ public class RFBMatch {
         }
         event.setCancelled(true);
     }
+    
+    /**
+     * Call when a entity damager
+     * @param EntityDamageEvent.
+     * @author jdgil
+     */
+    public void playerDeath(PlayerDeathEvent event) {
+        this.gameOver();
+//        if(event.)
+    }
+    
+    /**
+     * When player exits or gets kicked out of the match
+     * @param PlayerQuitEvent.
+     * @author: kvnamo
+     */
+    public void playerQuit(PlayerQuitEvent event) {
+        String playerName = event.getPlayer().getName();
+
+        final RFBPlayer player = this.players.get(playerName);
+        this.players.remove(playerName);
+
+        if (RFBStatus.STARTING_MATCH.equals(this.status)) {
+            // Check if starting players number is reached
+            if(this.startingPlayers()) return;
+                    
+            // Update server status
+            this.status = RFBStatus.WAITING_FOR_PLAYERS;
+            plugin.getPersistence().updateServerStatus(this.status);
+
+            // Cancel begin timer task
+            this.timerTask.cancel();
+        }
+        else if (RFBStatus.IN_PROGRESS.equals(this.status) && player != null) {
+            //Save player stats
+            player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+            player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+            this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
+            
+            this.broadcastMessage(String.format("%s[%s] %squit the game", ChatColor.RED, playerName, ChatColor.DARK_GRAY));
+            this.gameOver();
+        }
+        
+        // Update scoreboard
+        this.rfbScoreboard.setMatchPlayers(this.players.size());
+    }
+    
+    /**
+     * Required starting players
+     * @author kvnamo
+     */
+    private boolean startingPlayers() {
+        
+        if(this.players.size() < this.requiredPlayers){
+
+            for(RFBPlayer player : this.spectators.values()){
+                // Add spectator to players list
+                this.players.put(player.getBukkitPlayer().getName(), player);
+                this.spectators.remove(player.getBukkitPlayer().getName());
+                
+                // Show player
+                this.showPlayer(player.getBukkitPlayer());
+                
+                // Send player to spawn location
+                player.getBukkitPlayer().setFlying(false);
+                player.getBukkitPlayer().teleport(this.arena == null ? lobbyLocation : this.arena.getRandomSpawn());
+                player.getBukkitPlayer().sendMessage(String.format("%sYou are now playing the game!", ChatColor.YELLOW));
+                
+                // Check if more spectators are needed
+                if(this.players.size() == this.requiredPlayers) return true; 
+            }
+        }
+        
+        return false;
+    }
+    
+    private void showPlayer(Player bukkitPlayer){
+        for (RFBPlayer player : this.players.values()) {
+            player.getBukkitPlayer().showPlayer(bukkitPlayer);
+        }
+        
+        for (RFBPlayer player : this.spectators.values()) {
+            player.getBukkitPlayer().showPlayer(bukkitPlayer);
+        }
+    }
 
     /**
      * Super jump
      * 
      * @param PlayerToggleFlightEvent
-     * @author kvnamo
+     * @author jdgil
      */
     public void superJump(PlayerToggleFlightEvent event) {
         final Player bukkitPlayer = event.getPlayer();

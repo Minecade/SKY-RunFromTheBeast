@@ -5,8 +5,11 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.world.WorldInitEvent;
 
@@ -45,6 +48,30 @@ public class RFBListener implements Listener {
             event.setCancelled(true);
         }
         this.plugin.getServer().getLogger().info("onPlayerGameModeChange");
+    }
+    
+    /**
+     * Called by PlayerQuitEvent when player exits the match.
+     * @param playerQuitEvent
+     * @author jdgil
+     */
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event){
+        // Remove quit message.
+        event.setQuitMessage(null);  
+        this.match.playerQuit(event);
+        this.plugin.getServer().getLogger().info("onPlayerQuit");
+    }
+    
+    /**
+     * Call when a entity is damage.
+     * @param event
+     * @author victorv, kvnamo
+     */
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        this.match.playerDeath(event);
+        this.plugin.getServer().getLogger().info("onPlayerDeath");
     }
     
     /**
