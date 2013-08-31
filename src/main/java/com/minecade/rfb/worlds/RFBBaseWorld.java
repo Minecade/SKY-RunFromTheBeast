@@ -26,6 +26,15 @@ public class RFBBaseWorld extends MinecadeWorld {
         super(worldName, worldLocation, plugin);
         
     }
+    
+    /**
+     * Instantiates a new rFB base world.
+     *
+     * @param plugin the plugin
+     */
+    public RFBBaseWorld(MinecadePlugin plugin) {
+        super(plugin);
+    }
 
     /**
      * @return the beastSpawnLocation
