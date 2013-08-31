@@ -14,7 +14,7 @@ public class RFBScoreBoard {
     /**
      * Scoreboard title
      */
-    private final String TITLE = "Gravity Run";
+    private final String TITLE = "Run From The Beast";
     
     /**
      * Scoreboard objective
