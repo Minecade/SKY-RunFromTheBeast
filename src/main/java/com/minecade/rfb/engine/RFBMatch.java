@@ -98,6 +98,10 @@ public class RFBMatch {
 
         final RFBPlayer player = new RFBPlayer(this.plugin, bukkitPlayer);
         EngineUtils.clearBukkitPlayer(bukkitPlayer);
+        
+        // Setup scoreboard
+        this.rfbScoreboard.assignTeam(player);
+        bukkitPlayer.setScoreboard(this.rfbScoreboard.getScoreboard());
 
         if (RFBStatus.WAITING_FOR_PLAYERS.equals(this.status)) {
             // If player is spectator or OP or VIP let it fly

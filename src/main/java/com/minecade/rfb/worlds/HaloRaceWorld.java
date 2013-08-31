@@ -25,7 +25,7 @@ public class HaloRaceWorld extends RFBBaseWorld {
         addLocation(new MapLocation(540, 5, -874));
         addLocation(new MapLocation(540, 5, -876));
         
-        setBeastSpawnLocation(new MapLocation(459, 4, -915));
+        setBeastSpawnLocation(new MapLocation(534.56, 5, -875.43));
     }
 
 }

@@ -14,7 +14,7 @@ public class RFBScoreBoard {
     /**
      * Scoreboard title
      */
-    private final String TITLE = "Gravity Run";
+    private final String TITLE = "Run From The Beast";
     
     /**
      * Scoreboard objective
@@ -72,7 +72,7 @@ public class RFBScoreBoard {
         }
         
         // Setup scoreboard
-        this.scoreboard.registerNewObjective(OBJECTIVE, "GravityRun")
+        this.scoreboard.registerNewObjective(OBJECTIVE, "Run From The Beast")
             .setDisplayName(String.format("%s%s", ChatColor.YELLOW, TITLE)); 
         this.getScoreboardObjective().setDisplaySlot(DisplaySlot.SIDEBAR);
     }

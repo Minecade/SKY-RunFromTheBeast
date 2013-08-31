@@ -18,7 +18,7 @@ import com.minecade.rfb.worlds.HaloRaceWorld;
 public class RunFromTheBeastPlugin extends MinecadePlugin {
 
     private MinecadeWorld lobby;
-    private List<MinecadeWorld> runFromTheBestWorlds = new ArrayList<MinecadeWorld>();
+    private List<MinecadeWorld> runFromTheBeastWorlds = new ArrayList<MinecadeWorld>();
     
     private static final String BUTTERSLAP_COMMANDS_PACKAGE = "com.minecade.bs.command";
     
@@ -33,7 +33,7 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
      * @return
      */
     public MinecadeWorld getRandomWorld() {
-        return runFromTheBestWorlds.get(getRandom().nextInt(runFromTheBestWorlds.size()));
+        return runFromTheBeastWorlds.get(getRandom().nextInt(runFromTheBeastWorlds.size()));
     }
     
     /**
@@ -64,8 +64,9 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
         getLogger().info("onEnable: Creating Worlds...");
         lobby = new RFBLobbyWorld(this);
         
-        runFromTheBestWorlds.add(new HaloRaceWorld(this));
 
+        runFromTheBeastWorlds.add(new HaloRaceWorld(this));
+        
         getLogger().info("onEnable: Worlds Created...");
         
         // Create or update server status in DB.
