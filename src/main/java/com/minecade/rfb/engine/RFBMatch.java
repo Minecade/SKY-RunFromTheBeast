@@ -329,6 +329,7 @@ public class RFBMatch {
             if (player != null) {
                 // if death player is the beast
                 if (player.getBukkitPlayer().getName().equalsIgnoreCase(beast.getBukkitPlayer().getName())) {
+                    this.players.remove(player.getBukkitPlayer().getName());
                     synchronized (this.players) {
                         for (RFBPlayer playerMatch : this.players.values()) {
                             // Save Stats for winners: Runners
@@ -366,7 +367,6 @@ public class RFBMatch {
 
                     player.getBukkitPlayer().teleport(this.arena.getRandomSpawn());
                     EngineUtils.disconnect(player.getBukkitPlayer(), LOBBY, String.format("The beast was killed you, thanks for playing!"));
-                    player.getBukkitPlayer().sendMessage(String.format("%s You are now spectating the game.", ChatColor.YELLOW));
                     this.broadcastMessage(String.format("%s[%s] %slost.", ChatColor.RED, player.getBukkitPlayer().getName(), ChatColor.DARK_GRAY));
 
                     this.rfbScoreboard.setMatchPlayers(this.players.size());
