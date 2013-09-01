@@ -6,7 +6,6 @@ import com.avaje.ebean.SqlUpdate;
 import com.minecade.engine.data.MinecadeAccount;
 import com.minecade.engine.data.MinecadePersistence;
 import com.minecade.rfb.engine.RFBPlayer;
-import com.minecade.rfb.data.PlayerModel;
 import com.minecade.rfb.enums.RFBStatus;
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
 
@@ -60,7 +59,9 @@ public class RFBPersistence extends MinecadePersistence {
         // Creates a new bean that is managed by bukkit
         if(playerModel == null){ 
             playerModel = this.plugin.getDatabase().createEntityBean(PlayerModel.class);
-            playerModel.setUsername(player.getBukkitPlayer().getName());  
+            playerModel.setUsername(player.getBukkitPlayer().getName());
+            playerModel.setKills(0);
+            playerModel.setDeaths(0);
             playerModel.setWins(0);
             playerModel.setLosses(0);
             playerModel.setTimePlayed(0); 
