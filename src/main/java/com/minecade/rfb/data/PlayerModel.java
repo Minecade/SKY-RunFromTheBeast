@@ -28,6 +28,9 @@ public class PlayerModel {
     @Column(name = "kills", nullable = false)
     private long kills;
     
+    @Column(name = "deaths", nullable = false)
+    private long deaths;
+    
     @Column(name = "suicides", nullable = false)
     private long suicides;
     
@@ -193,6 +196,20 @@ public class PlayerModel {
      */
     public void setTimePlayed(int timePlayed) {
         this.timePlayed = timePlayed;
+    }
+
+    /**
+     * @return the deaths
+     */
+    public long getDeaths() {
+        return deaths;
+    }
+
+    /**
+     * @param deaths the deaths to set
+     */
+    public void setDeaths(long deaths) {
+        this.deaths = deaths;
     }
 
     /**
