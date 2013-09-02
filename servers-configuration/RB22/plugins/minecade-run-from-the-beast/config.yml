@@ -5,7 +5,7 @@
 
 # Entities root packages
 entities:
-    package: 'com.minecade.gr.data'
+    package: 'com.minecade.rfb.data'
 
 # Server
 server:
@@ -15,34 +15,33 @@ server:
     - '&dExecute Double Jumps by tapping the space bar twice!'
     - '&dVIP users can join to full servers, visit skydoesminecraft.com/shop to purchase VIP!'
     id: 22
-    max-players: 16 # Match players in the server.        
-    name: 'Gravity Server 22'
-    
+    max-players: 6 # Match players in the server.        
+    name: 'Run from The Beast Server 22'
 
 # Match
 match:
     ban-message: 'You have been banned from sky servers. Appeal at http://skydoesminecraft.com/'
-    lobby-world-name: 'gravityrunlobby'
+    lobby-world-name: 'RFBLobbyWorld'
     time: 300 # Match duration time in seconds.
-    start-countdown: 30 # The time in seconds to wait when the MATCH_PLAYERS limit reached to start the match.
-    ready-countdown: 10 # The time to wait until all users are ready to start the match.
-    required-players: 16 # Minimun Players needed to start the match.
+    start-countdown: 20 # The time in seconds to wait when the MATCH_PLAYERS limit reached to start the match.
+    ready-countdown: 5 # The time to wait until all users are ready to start the match.
+    required-players: 6 # Minimun Players needed to start the match.
     server-full-message: 'The server if full, visit skydoesminecraft.com/shop to purchase VIP!'
  
 # Lobby
 lobby:
     spawn:
         pitch: 0
-        world: gravityrunlobby
-        x: -1120
-        y: 13
+        world: RFBLobbyWorld
+        x: 0.36
+        y: 167
         yaw: 0
-        z: 2452
+        z: 0.43
         
 # Central Database
 minecade:
     central-database:
-        username: gravityrun
+        username: runbeast
         driver: com.mysql.jdbc.Driver
-        password: 53611umxpeD4
-        url: jdbc:mysql://209.188.3.154:3306/sky_network
+        password: hrg2mTGy2JAh
+        url: jdbc:mysql://172.23.24.95:3306/sky_network
