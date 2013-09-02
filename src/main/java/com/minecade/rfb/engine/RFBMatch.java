@@ -122,6 +122,7 @@ public class RFBMatch {
                 this.timeLeft = this.timeLeft == 0 ? this.startCountdown : timeLeft;
                 this.timerTask = new TimerTask(this, this.timeLeft, true, false, false, false);
                 this.timerTask.runTaskTimer(this.plugin, 1l, 20l);
+                this.broadcastMessage(String.format("%s[%s] %splayers reached, Match Will begin soon", ChatColor.RED, this.players.size(), ChatColor.DARK_GRAY));
             } else {
                 this.broadcastMessage(String.format("%sWe need %s[%s] %splayer(s) to start.", ChatColor.DARK_GRAY, ChatColor.RED, playersRemaining,
                         ChatColor.DARK_GRAY));
@@ -129,12 +130,10 @@ public class RFBMatch {
         } else if (this.players.size() < this.maxPlayers) {
 
             if (player.getPlayerModel().isVip()) {
-                // player.loadInventoy();
                 this.players.put(bukkitPlayer.getName(), player);
 
                 this.rfbScoreboard.setMatchPlayers(this.players.size());
             } else if (plugin.getPersistence().isPlayerStaff(bukkitPlayer)) {
-                // player.loadInventoy();
                 this.hidePlayer(bukkitPlayer);
                 this.spectators.put(bukkitPlayer.getName(), player);
             } else {
@@ -252,7 +251,7 @@ public class RFBMatch {
                         player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
                         player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
                         this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-                        player.getBukkitPlayer().sendMessage("Time is over, you lost!");
+                        player.getBukkitPlayer().sendMessage(String.format("%sTime is over, you lost!", ChatColor.RED));
                     }
                 }
             
@@ -290,7 +289,7 @@ public class RFBMatch {
         this.rfbScoreboard.setTimeLeft(timeLeft);
 
         for (RFBPlayer player : this.players.values()) {
-            if (RFBStatus.STARTING_MATCH.equals(this.status) && timeLeft < 6) {
+            if ((RFBStatus.STARTING_MATCH.equals(this.status) || RFBStatus.IN_PROGRESS.equals(this.status)) && timeLeft < 6) {
                 player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);
             }
         }
@@ -399,7 +398,7 @@ public class RFBMatch {
      * 
      * @param PlayerQuitEvent
      *            .
-     * @author: kvnamo
+     * @author: jdgil
      */
     public void playerQuit(PlayerQuitEvent event) {
         String playerName = event.getPlayer().getName();
@@ -527,6 +526,12 @@ public class RFBMatch {
                     break;
                 default:
                     break;
+                }
+                break;
+            case FALL:
+                final RFBPlayer player = this.players.get(bukkitPlayer.getName());
+                if (player != null) {
+                    event.setCancelled(true);
                 }
                 break;
             case ENTITY_ATTACK:
