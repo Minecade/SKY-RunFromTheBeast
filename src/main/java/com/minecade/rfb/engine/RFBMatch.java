@@ -120,7 +120,7 @@ public class RFBMatch {
 
                 // Begin match start timer
                 this.timeLeft = this.timeLeft == 0 ? this.startCountdown : timeLeft;
-                this.timerTask = new TimerTask(this, this.timeLeft, true, false, false);
+                this.timerTask = new TimerTask(this, this.timeLeft, true, false, false, false);
                 this.timerTask.runTaskTimer(this.plugin, 1l, 20l);
             } else {
                 this.broadcastMessage(String.format("%sWe need %s[%s] %splayer(s) to start.", ChatColor.DARK_GRAY, ChatColor.RED, playersRemaining,
@@ -172,7 +172,7 @@ public class RFBMatch {
         }
 
         // Create the task for the count down.
-        this.timerTask = new TimerTask(this, this.readyCountdown, false, true, false);
+        this.timerTask = new TimerTask(this, this.readyCountdown, false, true, false, false);
         this.timerTask.runTaskTimer(this.plugin, 1l, 20l);
     }
 
@@ -189,8 +189,8 @@ public class RFBMatch {
         this.rfbScoreboard.setMatchPlayers(this.players.size());
 
         this.timeLeft = this.time;
-        this.timerTask = new TimerTask(this, this.timeLeft, false, false, false);
-        this.timerTask.runTaskTimer(plugin, 11, 20l);
+        this.timerTask = new TimerTask(this, this.timeLeft, false, false, true, false);
+        this.timerTask.runTaskTimer(plugin, 1l, 20l);
 
         this.verifyGameOver();
         this.broadcastMessage(String.format("%sMatch started!", ChatColor.RED));
@@ -231,28 +231,35 @@ public class RFBMatch {
     public void verifyGameOver() {
         // Finish the game if there is only one player or the match timer is
         // cero
-        if (this.players.size() <= 1 || this.timeLeft == 0) {
+        this.plugin.getServer().getLogger().severe(String.format("verifyGameOver.timeleft: %s", this.timeLeft));
+        if (this.players.size() <= 1 || this.timeLeft <= 0) {
+             // Save winners stats in database
+            synchronized (this.players) {
+                for (RFBPlayer player : this.players.values()) {
+                    if(this.timeLeft != 0) {
+                        // Save player stats
+                        player.getPlayerModel().setWins(player.getPlayerModel().getWins() + 1);
+                        player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+                        this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
+                        
+                        // Get winners
+                        this.winners = StringUtils.isBlank(this.winners) ? player.getBukkitPlayer().getName() : this.winners + ", "
+                                + player.getBukkitPlayer().getName();
+                        
+                        // Throw fireworks for winner
+                        new FireworksTask(player.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
+                    } else {
+                        player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+                        player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+                        this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
+                        player.getBukkitPlayer().sendMessage("Time is over, you lost!");
+                    }
+                }
+            
             // Start finish timer
             this.timerTask.cancel();
             this.timeLeft = 10;
-            new TimerTask(this, this.timeLeft, false, false, true).runTaskTimer(this.plugin, 11, 20l);
-
-            // Save winners stats in database
-            synchronized (this.players) {
-                for (RFBPlayer player : this.players.values()) {
-                    // Save player stats
-                    player.getPlayerModel().setWins(player.getPlayerModel().getWins() + 1);
-                    player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                    this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-
-                    // Get winners
-                    this.winners = StringUtils.isBlank(this.winners) ? player.getBukkitPlayer().getName() : this.winners + ", "
-                            + player.getBukkitPlayer().getName();
-
-                    // Throw fireworks for winner
-                    new FireworksTask(player.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
-                }
-            }
+            new TimerTask(this, this.timeLeft, false, false, false, true).runTaskTimer(this.plugin, 11, 20l);}
         }
     }
 
@@ -353,7 +360,7 @@ public class RFBMatch {
 
                     this.timerTask.cancel();
                     this.timeLeft = 10;
-                    new TimerTask(this, this.timeLeft, false, false, true).runTaskTimer(this.plugin, 11, 20l);
+                    new TimerTask(this, this.timeLeft, false, false, false, true).runTaskTimer(this.plugin, 11, 20l);
                 } else {
                     // Death is a runner
                     // Remove dead player from the players list and add him to

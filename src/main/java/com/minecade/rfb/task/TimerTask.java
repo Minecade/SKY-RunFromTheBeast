@@ -11,6 +11,7 @@ public class TimerTask extends BukkitRunnable{
     private boolean initMatch;
     private boolean startMatch;
     private boolean endMatch;
+    private boolean gameOver;
     
     /**
      * Timer task constructor
@@ -18,12 +19,13 @@ public class TimerTask extends BukkitRunnable{
      * @param delay
      * @author jdgil
      */
-    public TimerTask(RFBMatch match, int countdown, boolean initMatch, boolean startMatch, boolean endMatch){
+    public TimerTask(RFBMatch match, int countdown, boolean initMatch, boolean startMatch, boolean gameOver, boolean endMatch){
         this.match = match;
         this.countdown = countdown;
         this.initMatch = initMatch;
         this.startMatch = startMatch;
         this.endMatch = endMatch;
+        this.gameOver = gameOver;
     }
     
     /**
@@ -32,6 +34,7 @@ public class TimerTask extends BukkitRunnable{
      */
     @Override
     public void run() {
+        this.match.setRemainingTime(--this.countdown);
         if(this.countdown <= 0){
             if(this.initMatch){
                 this.match.initMatch();
@@ -39,12 +42,14 @@ public class TimerTask extends BukkitRunnable{
             else if(this.startMatch){
                 this.match.startMatch();
             }
+            else if(this.gameOver){
+                this.match.verifyGameOver();
+            }
             else if(this.endMatch){
                 this.match.stopGame();
             }
             super.cancel();
         }
-        this.match.setRemainingTime(this.countdown--);
     }
 }
 

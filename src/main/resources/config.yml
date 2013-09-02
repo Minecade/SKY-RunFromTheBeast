@@ -11,7 +11,6 @@ server:
     announcements:
     - '&dVisit skydoesminecraft.com/shop to purchase VIP!'
     - '&dJoin the fun at skydoesminecraft.com for up-to-date information on Sky Networks!'
-    - '&dExecute Double Jumps by tapping the space bar twice!'
     - '&dVIP users can join to full servers, visit skydoesminecraft.com/shop to purchase VIP!'
     id: 1
     max-players: 40 # Match players in the server.        
@@ -21,7 +20,7 @@ server:
 match:
     ban-message: 'You have been banned from sky servers. Appeal at http://sky-sg.net/'
     lobby-world-name: 'RFBLobbyWorld'
-    time: 300 # Match duration time in seconds.
+    time: 30 # Match duration time in seconds.
     start-countdown: 10 # The time in seconds to wait when the MATCH_PLAYERS limit reached to start the match.
     ready-countdown: 5 # The time to wait until all users are ready to start the match.
     required-players: 3 # Minimun Players needed to start the match.
