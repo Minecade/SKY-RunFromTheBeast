@@ -122,7 +122,7 @@ public class RFBMatch {
                 this.timeLeft = this.timeLeft == 0 ? this.startCountdown : timeLeft;
                 this.timerTask = new TimerTask(this, this.timeLeft, true, false, false, false);
                 this.timerTask.runTaskTimer(this.plugin, 1l, 20l);
-                this.broadcastMessage(String.format("%s[%s] %splayers reached, Match Will begin soon", ChatColor.RED, this.players.size(), ChatColor.DARK_GRAY));
+                this.broadcastMessage(String.format("%s[%s] %splayers reached, the match will begin soon", ChatColor.RED, this.players.size(), ChatColor.DARK_GRAY));
             } else {
                 this.broadcastMessage(String.format("%sWe need %s[%s] %splayer(s) to start.", ChatColor.DARK_GRAY, ChatColor.RED, playersRemaining,
                         ChatColor.DARK_GRAY));
@@ -160,7 +160,7 @@ public class RFBMatch {
             beast = (RFBPlayer) players.values().toArray()[plugin.getRandom().nextInt(players.size())];
             beast.getBukkitPlayer().setLevel(10);
             beast.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getBeastSpawnLocation());
-            beast.getBukkitPlayer().sendMessage("You are the BEAST, pickup items in the chest!");
+            beast.getBukkitPlayer().sendMessage("You are the BEAST, pickup the items in the chest!");
 
             for (RFBPlayer player : this.players.values()) {
                 if (!player.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
@@ -251,7 +251,7 @@ public class RFBMatch {
                         player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
                         player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
                         this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-                        player.getBukkitPlayer().sendMessage(String.format("%sTime is over, you lost!", ChatColor.RED));
+                        player.getBukkitPlayer().sendMessage(String.format("%sTime is out, you lost the game!", ChatColor.RED));
                     }
                 }
             
@@ -372,7 +372,7 @@ public class RFBMatch {
                     this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
 
                     player.getBukkitPlayer().teleport(this.arena.getRandomSpawn());
-                    EngineUtils.disconnect(player.getBukkitPlayer(), LOBBY, String.format("The beast was killed you, thanks for playing!"));
+                    EngineUtils.disconnect(player.getBukkitPlayer(), LOBBY, String.format("The beast has killed you, thanks for playing!"));
                     this.broadcastMessage(String.format("%s[%s] %slost.", ChatColor.RED, player.getBukkitPlayer().getName(), ChatColor.DARK_GRAY));
 
                     this.rfbScoreboard.setMatchPlayers(this.players.size());
@@ -467,7 +467,7 @@ public class RFBMatch {
                     // Send player to spawn location
                     player.getBukkitPlayer().setFlying(false);
                     player.getBukkitPlayer().teleport(this.arena == null ? lobbyLocation : this.arena.getRandomSpawn());
-                    player.getBukkitPlayer().sendMessage(String.format("%sYou are now playing the game!", ChatColor.YELLOW));
+                    player.getBukkitPlayer().sendMessage(String.format("%sThe game has started!", ChatColor.YELLOW));
 
                     // Check if more spectators are needed
                     if (this.players.size() == this.requiredPlayers)
@@ -561,7 +561,7 @@ public class RFBMatch {
 
         // Spectators are not allowed to send messages.
         if (player == null) {
-            event.getPlayer().sendMessage(String.format("%sOnly live players can send messages.", ChatColor.GRAY));
+            event.getPlayer().sendMessage(String.format("%sOnly living players can send messages.", ChatColor.GRAY));
             event.setCancelled(true);
             return;
         }
