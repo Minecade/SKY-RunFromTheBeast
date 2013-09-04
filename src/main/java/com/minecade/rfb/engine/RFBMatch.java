@@ -3,14 +3,17 @@ package com.minecade.rfb.engine;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DateUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.World;
@@ -133,8 +136,10 @@ public class RFBMatch {
                 //TODO
                 // Set beast.
                 for (RFBPlayer optionalBeast : this.players.values()) {
-                    if(player.getPlayerModel().isVip() && this.isBeastVipDialyPassEnable(player))
-                        optionalBeast.getBukkitPlayer().sendMessage(String.format("%sYou Have enable your Dialy Beast %sVIP %sPass, You could be selected!", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
+                    if(optionalBeast.getPlayerModel().isVip() && this.isBeastVipDialyPassEnable(optionalBeast)){
+                        optionalBeast.getBukkitPlayer().sendMessage(String.format("%sYou Have enable your Dialy Beast %sVIP %sPass", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
+                        optionalBeast.getBukkitPlayer().sendMessage(String.format("%sYou could be selected as Beast easily!", ChatColor.DARK_GRAY));
+                    }
                 }
             } else {
                 this.broadcastMessage(String.format("%sWe need %s[%s] %splayer(s) to start.", ChatColor.DARK_GRAY, ChatColor.RED, playersRemaining,
@@ -175,6 +180,7 @@ public class RFBMatch {
             beast.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getBeastSpawnLocation());
 
             for (RFBPlayer player : this.players.values()) {
+                player.getBukkitPlayer().setGameMode(GameMode.SURVIVAL);
                 if (!player.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
                     EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
                     player.getBukkitPlayer().teleport(this.arena.getRandomSpawn());
@@ -189,19 +195,17 @@ public class RFBMatch {
     }
     
     private RFBPlayer selectBeast(Collection<RFBPlayer> players){
-        Collection<RFBPlayer> vipPlayers = new ArrayList<RFBPlayer>();
-        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
-        Date date = new Date();
-        dateFormat.format(date);
         
+        Collection<RFBPlayer> vipPlayers = new ArrayList<RFBPlayer>();
         for (RFBPlayer player : players) {
             if(player.getPlayerModel().isVip() && this.isBeastVipDialyPassEnable(player))
                 vipPlayers.add(player);
         }
         if(vipPlayers.size() > 0){
             RFBPlayer playerSelected =  (RFBPlayer) vipPlayers.toArray()[plugin.getRandom().nextInt(vipPlayers.size())];
-            playerSelected.getPlayerModel().setBeastPass(new Date());
+            playerSelected.getPlayerModel().setBeastPass(DateUtils.truncate(new Date(), Calendar.DATE));
             this.plugin.getPersistence().updatePlayer(playerSelected.getPlayerModel());
+            
             playerSelected.getBukkitPlayer().sendMessage(String.format("%sSystem has used your Dialy Beast %sVIP %sPass", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
             return playerSelected;
         }
@@ -209,13 +213,19 @@ public class RFBMatch {
     }
     
     private boolean isBeastVipDialyPassEnable(RFBPlayer player) {
-        if(player.getPlayerModel().isVip() &&  player.getPlayerModel().getBeastPass() != null){
+        if(player.getPlayerModel().isVip()){
+            
+            if(player.getPlayerModel().getBeastPass() == null) {
+                player.getPlayerModel().setBeastPass(new Date(0l));
+                this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
+            }
+            
             DateFormat dateFormatPass = new SimpleDateFormat("yyyy/MM/dd");
             DateFormat dateFormatToday = new SimpleDateFormat("yyyy/MM/dd");
             Date lastTimeBeast = player.getPlayerModel().getBeastPass();
             dateFormatPass.format(lastTimeBeast);
             dateFormatToday.format(new Date());
-            if(dateFormatPass.getCalendar().compareTo(dateFormatToday.getCalendar()) < 0){
+            if(!((dateFormatPass.format(lastTimeBeast)).compareTo(dateFormatToday.format(new Date())) == 0)){
                 return true;
             }
         }
@@ -500,7 +510,9 @@ public class RFBMatch {
             // Check if starting players number is reached
             if (this.startingPlayers())
                 return;
-
+            
+            if(this.players.size() == 0)
+                this.stopGame();
             // Update server status
             this.status = RFBStatus.WAITING_FOR_PLAYERS;
             plugin.getPersistence().updateServerStatus(this.status);
