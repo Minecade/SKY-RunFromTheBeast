@@ -1,5 +1,10 @@
 package com.minecade.rfb.engine;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -34,6 +39,7 @@ public class RFBMatch {
     private final int startCountdown;
     private final int readyCountdown;
     private final int requiredPlayers;
+    private final int beastFreedomCountdown;
 
     private RunFromTheBeastPlugin plugin;
     private Location lobbyLocation;
@@ -57,6 +63,7 @@ public class RFBMatch {
         this.startCountdown = plugin.getConfig().getInt("match.start-countdown");
         this.readyCountdown = plugin.getConfig().getInt("match.ready-countdown");
         this.requiredPlayers = plugin.getConfig().getInt("match.required-players");
+        this.beastFreedomCountdown = plugin.getConfig().getInt("match.beast-countdown");
 
         this.players = new ConcurrentHashMap<String, RFBPlayer>(this.requiredPlayers);
         this.spectators = new ConcurrentHashMap<String, RFBPlayer>();
@@ -123,6 +130,12 @@ public class RFBMatch {
                 this.timerTask = new TimerTask(this, this.timeLeft, true, false, false, false);
                 this.timerTask.runTaskTimer(this.plugin, 1l, 20l);
                 this.broadcastMessage(String.format("%s[%s] %splayers reached, Match Will begin soon", ChatColor.RED, this.players.size(), ChatColor.DARK_GRAY));
+                //TODO
+                // Set beast.
+                for (RFBPlayer optionalBeast : this.players.values()) {
+                    if(player.getPlayerModel().isVip() && this.isBeastVipDialyPassEnable(player))
+                        optionalBeast.getBukkitPlayer().sendMessage(String.format("%sYou Have enable your Dialy Beast %sVIP %sPass, You could be selected!", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
+                }
             } else {
                 this.broadcastMessage(String.format("%sWe need %s[%s] %splayer(s) to start.", ChatColor.DARK_GRAY, ChatColor.RED, playersRemaining,
                         ChatColor.DARK_GRAY));
@@ -156,11 +169,10 @@ public class RFBMatch {
 
         synchronized (this.players) {
 
-            // Set random beast.
-            beast = (RFBPlayer) players.values().toArray()[plugin.getRandom().nextInt(players.size())];
-            beast.getBukkitPlayer().setLevel(10);
+            // Set beast.
+            beast = this.selectBeast(this.players.values());
+            beast.getBukkitPlayer().sendMessage(String.format("%sYou are the %sBEAST%s, pickup items in the chest!", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
             beast.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getBeastSpawnLocation());
-            beast.getBukkitPlayer().sendMessage("You are the BEAST, pickup items in the chest!");
 
             for (RFBPlayer player : this.players.values()) {
                 if (!player.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
@@ -169,10 +181,45 @@ public class RFBMatch {
                 }
             }
         }
-
-        // Create the task for the count down.
+        this.broadcastMessageToRunners(String.format("%sRunners be prepared to run soon", ChatColor.DARK_GRAY));
+        this.broadcastMessageToRunners(String.format("%sYou will be free when countdown get %s[0]", ChatColor.DARK_GRAY, ChatColor.RED));
+        // Create the task for the count down, freedom for runners
         this.timerTask = new TimerTask(this, this.readyCountdown, false, true, false, false);
         this.timerTask.runTaskTimer(this.plugin, 1l, 20l);
+    }
+    
+    private RFBPlayer selectBeast(Collection<RFBPlayer> players){
+        Collection<RFBPlayer> vipPlayers = new ArrayList<RFBPlayer>();
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+        Date date = new Date();
+        dateFormat.format(date);
+        
+        for (RFBPlayer player : players) {
+            if(player.getPlayerModel().isVip() && this.isBeastVipDialyPassEnable(player))
+                vipPlayers.add(player);
+        }
+        if(vipPlayers.size() > 0){
+            RFBPlayer playerSelected =  (RFBPlayer) vipPlayers.toArray()[plugin.getRandom().nextInt(vipPlayers.size())];
+            playerSelected.getPlayerModel().setBeastPass(new Date());
+            this.plugin.getPersistence().updatePlayer(playerSelected.getPlayerModel());
+            playerSelected.getBukkitPlayer().sendMessage(String.format("%sSystem has used your Dialy Beast %sVIP %sPass", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
+            return playerSelected;
+        }
+        return (RFBPlayer) players.toArray()[plugin.getRandom().nextInt(players.size())];
+    }
+    
+    private boolean isBeastVipDialyPassEnable(RFBPlayer player) {
+        if(player.getPlayerModel().isVip() &&  player.getPlayerModel().getBeastPass() != null){
+            DateFormat dateFormatPass = new SimpleDateFormat("yyyy/MM/dd");
+            DateFormat dateFormatToday = new SimpleDateFormat("yyyy/MM/dd");
+            Date lastTimeBeast = player.getPlayerModel().getBeastPass();
+            dateFormatPass.format(lastTimeBeast);
+            dateFormatToday.format(new Date());
+            if(dateFormatPass.getCalendar().compareTo(dateFormatToday.getCalendar()) < 0){
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -192,7 +239,22 @@ public class RFBMatch {
         this.timerTask.runTaskTimer(plugin, 1l, 20l);
 
         this.verifyGameOver();
-        this.broadcastMessage(String.format("%sMatch started!", ChatColor.RED));
+        this.broadcastMessageToRunners(String.format("%sBegin to run now, Beast will be free in %s%s %sseconds", ChatColor.DARK_GRAY, ChatColor.RED, this.beastFreedomCountdown, ChatColor.DARK_GRAY));
+        //Free the runners now
+        for (RFBPlayer player : this.players.values()) {
+            if (!player.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
+                player.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getFreeRunnersRandomSpawn());
+            }
+        }
+        this.broadcastMessageToBeast(String.format("%sBe prepared, get your weapon and armor", ChatColor.DARK_GRAY));
+        this.broadcastMessageToBeast(String.format("%sYou will be free in %s[%s] %sseconds", ChatColor.DARK_GRAY, ChatColor.RED, this.beastFreedomCountdown, ChatColor.DARK_GRAY));
+        // Free the beast task
+        this.plugin.getServer().getScheduler().runTaskLater(this.plugin, new Runnable() {
+            @Override
+            public void run() {
+                beast.getBukkitPlayer().teleport(((RFBBaseWorld) RFBMatch.this.arena).getFreeRunnersRandomSpawn());
+            }
+        }, this.beastFreedomCountdown * 20);
     }
 
     /**
@@ -304,6 +366,34 @@ public class RFBMatch {
     private void broadcastMessage(String message) {
         for (RFBPlayer player : this.players.values()) {
             player.getBukkitPlayer().sendMessage(message);
+        }
+    }
+    
+    /**
+     * Broadcast message only to runners in match
+     * 
+     * @param message
+     * @author jdgil
+     */
+    private void broadcastMessageToRunners(String message) {
+        for (RFBPlayer player : this.players.values()) {
+            if (!(player.getBukkitPlayer().getName().equalsIgnoreCase(beast.getBukkitPlayer().getName()))) {
+                player.getBukkitPlayer().sendMessage(message);
+            }
+        }
+    }
+    
+    /**
+     * Broadcast message only to the beast in match
+     * 
+     * @param message
+     * @author jdgil
+     */
+    private void broadcastMessageToBeast(String message) {
+        for (RFBPlayer player : this.players.values()) {
+            if (player.getBukkitPlayer().getName().equalsIgnoreCase(beast.getBukkitPlayer().getName())) {
+                player.getBukkitPlayer().sendMessage(message);
+            }
         }
     }
 

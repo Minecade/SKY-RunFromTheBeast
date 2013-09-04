@@ -47,6 +47,10 @@ public class PlayerModel {
     @Column(name = "time_played", nullable = false)
     private int timePlayed;
     
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "beast_pass", nullable = true)
+    private Date beastPass;
+    
     // Transient fields
     private boolean admin;
     
@@ -238,5 +242,21 @@ public class PlayerModel {
      */
     public void setCm(boolean cm) {
         this.cm = cm;
+    }
+
+    /**
+     * @return the beast_Pass
+     * @author jdgil
+     */
+    public Date getBeastPass() {
+        return beastPass;
+    }
+
+    /**
+     * @param beast_Pass the beast_Pass to set
+     * @author jdgil
+     */
+    public void setBeastPass(Date beast_Pass) {
+        this.beastPass = beast_Pass;
     }
 }

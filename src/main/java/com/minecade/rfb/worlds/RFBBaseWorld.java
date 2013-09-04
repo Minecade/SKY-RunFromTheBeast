@@ -3,6 +3,9 @@
  */
 package com.minecade.rfb.worlds;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.bukkit.Location;
 
 import com.minecade.engine.MapLocation;
@@ -15,7 +18,8 @@ import com.minecade.engine.MinecadeWorld;
  */
 public class RFBBaseWorld extends MinecadeWorld {
     
-    public Location beastSpawnLocation; 
+    public Location beastSpawnLocation;
+    private final List<Location> runnersFreeSpawnLocation = new ArrayList<>(); 
 
     /**
      * @param worldName
@@ -49,7 +53,20 @@ public class RFBBaseWorld extends MinecadeWorld {
     public void setBeastSpawnLocation(MapLocation location) {
         this.beastSpawnLocation = location.toLocation(world);
     }
-    
-    
 
+    /**
+     * Adds a location to possible entity spawn points.
+     * @param location 
+     */
+    public void addFreeRunnersLocation(MapLocation location) {
+        runnersFreeSpawnLocation.add(location.toLocation(world));
+    }
+    
+    /**
+     * Returns a spawn point for entities from a list.
+     * @return 
+     */
+    public Location getFreeRunnersRandomSpawn() {
+        return runnersFreeSpawnLocation.get(plugin.getRandom().nextInt(runnersFreeSpawnLocation.size()));
+    }
 }

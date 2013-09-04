@@ -20,12 +20,16 @@ public class HaloRaceWorld extends RFBBaseWorld {
         world.setPVP(true);
         
         // set map spawn locations.
-        addLocation(new MapLocation(538, 5, -874));
-        addLocation(new MapLocation(538, 5, -876));
-        addLocation(new MapLocation(540, 5, -874));
-        addLocation(new MapLocation(540, 5, -876));
+        addLocation(new MapLocation(540.5, 5, -869.4));
+        addLocation(new MapLocation(540.5, 5, -871.5));
+        addLocation(new MapLocation(538, 5, -871.5));
+        addLocation(new MapLocation(538, 5, -869.4));
         
         setBeastSpawnLocation(new MapLocation(534.56, 5, -875.43));
+        
+        addFreeRunnersLocation(new MapLocation(538, 5, -874));
+        addFreeRunnersLocation(new MapLocation(538, 5, -876));
+        addFreeRunnersLocation(new MapLocation(540, 5, -874));
+        addFreeRunnersLocation(new MapLocation(540, 5, -876));
     }
-
 }
