@@ -159,8 +159,9 @@ public class RFBMatch {
                 this.spectators.put(bukkitPlayer.getName(), player);
             } else {
                 // Return to the lobby.
-                bukkitPlayer.sendMessage(ChatColor.RED + plugin.getConfig().getString("match.server-full-message"));
-                EngineUtils.disconnect(player.getBukkitPlayer(), LOBBY, String.format("The beast has killed you, thanks for playing!"));
+                //bukkitPlayer.sendMessage(ChatColor.RED + plugin.getConfig().getString("match.server-full-message"));
+                //EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+                bukkitPlayer.kickPlayer(plugin.getConfig().getString("server.full-message"));
                 return;
             }
         }
