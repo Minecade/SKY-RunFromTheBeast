@@ -99,7 +99,7 @@ public class RFBMatch {
      * @param PlayerJoinEvent
      * @author jdgil
      */
-    public void playerJoin(PlayerJoinEvent event) {
+    public synchronized void playerJoin(PlayerJoinEvent event) {
         final Player bukkitPlayer = event.getPlayer();
         bukkitPlayer.setAllowFlight(false);
 
