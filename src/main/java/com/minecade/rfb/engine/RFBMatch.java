@@ -24,6 +24,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.WorldInitEvent;
@@ -157,7 +158,9 @@ public class RFBMatch {
                 this.hidePlayer(bukkitPlayer);
                 this.spectators.put(bukkitPlayer.getName(), player);
             } else {
-                bukkitPlayer.kickPlayer(plugin.getConfig().getString("match.server-full-message"));
+                // Return to the lobby.
+                bukkitPlayer.sendMessage(ChatColor.RED + plugin.getConfig().getString("match.server-full-message"));
+                EngineUtils.disconnect(player.getBukkitPlayer(), LOBBY, String.format("The beast has killed you, thanks for playing!"));
                 return;
             }
         }
@@ -733,5 +736,19 @@ public class RFBMatch {
 
         player.setLastMessage(event.getMessage().toLowerCase());
         event.setFormat(player.getTag().getPrefix() + ChatColor.WHITE + "%s" + ChatColor.GRAY + ": %s");
+    }
+    
+    /**
+     * Call when player press right click button
+     * @param bukkitPlayer
+     * @author kvnamo
+     */
+    public void rightClick(PlayerInteractEvent event) {
+        Player bukkitPlayer = event.getPlayer();
+        ItemStack itemInHand = bukkitPlayer.getItemInHand();
+        
+        if(RFBInventoryEnum.LEAVE_COMPASS.getMaterial().equals(itemInHand.getType())){
+            EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+        }       
     }
 }
