@@ -44,7 +44,6 @@ import com.minecade.rfb.worlds.RFBBaseWorld;
 public class RFBMatch {
 
     private final int time;
-    private final int maxPlayers;
     private final int startCountdown;
     private final int readyCountdown;
     private final int requiredPlayers;
@@ -67,7 +66,6 @@ public class RFBMatch {
         this.plugin = plugin;
         this.rfbScoreboard = new RFBScoreBoard(this.plugin);
 
-        this.maxPlayers = plugin.getConfig().getInt("server.max-players");
         this.time = plugin.getConfig().getInt("match.time");
         this.startCountdown = plugin.getConfig().getInt("match.start-countdown");
         this.readyCountdown = plugin.getConfig().getInt("match.ready-countdown");
@@ -92,6 +90,8 @@ public class RFBMatch {
             this.lobbyLocation = EngineUtils.locationFromConfig(this.plugin.getConfig(), world, "lobby.spawn");
             world.setSpawnLocation(this.lobbyLocation.getBlockX(), this.lobbyLocation.getBlockY(), this.lobbyLocation.getBlockZ());
         }
+        
+        this.rfbScoreboard.init();
     }
 
     /**
