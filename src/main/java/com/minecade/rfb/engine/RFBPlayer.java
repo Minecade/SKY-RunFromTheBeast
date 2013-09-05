@@ -3,7 +3,6 @@ package com.minecade.rfb.engine;
 import org.bukkit.entity.Player;
 
 import com.minecade.engine.data.MinecadeAccount;
-import com.minecade.engine.enums.PlayerTagEnum;
 import com.minecade.rfb.data.PlayerModel;
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
 

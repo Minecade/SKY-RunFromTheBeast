@@ -462,15 +462,15 @@ public class RFBMatch {
      *            .
      * @author jdgil
      */
-    public void playerDeath(PlayerDeathEvent event) {
+    public synchronized void playerDeath(PlayerDeathEvent event) {
         final Player bukkitPlayer = (Player) event.getEntity();
         switch (this.status) {
         case IN_PROGRESS:
-            final RFBPlayer player = this.players.get(bukkitPlayer.getName());
+            final RFBPlayer player = this.players.remove(bukkitPlayer.getName());
             if (player != null) {
                 // if death player is the beast
                 if (player.getBukkitPlayer().getName().equalsIgnoreCase(beast.getBukkitPlayer().getName())) {
-                    this.players.remove(player.getBukkitPlayer().getName());
+                    //this.players.remove(player.getBukkitPlayer().getName());
                     synchronized (this.players) {
                         for (RFBPlayer playerMatch : this.players.values()) {
                             // Save Stats for winners: Runners
@@ -500,7 +500,7 @@ public class RFBMatch {
                     // Death is a runner
                     // Remove dead player from the players list and add him to
                     // spectators list
-                    this.players.remove(player.getBukkitPlayer().getName());
+                    //this.players.remove(player.getBukkitPlayer().getName());
 
                     // Save stats in database
                     player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
@@ -549,37 +549,38 @@ public class RFBMatch {
         String playerName = event.getPlayer().getName();
 
         final RFBPlayer player = this.players.remove(playerName);
+        if (player!= null) {
+            switch (this.status) {
+            case STARTING_MATCH:
+                // Check if starting players number is reached
+                int playersRemaining = requiredPlayers - this.players.size();
+                if (playersRemaining > 0) {
+                    // Cancel begin timer task
+                    this.timerTask.cancel();
 
-        switch (this.status) {
-        case STARTING_MATCH:
-            // Check if starting players number is reached
-            int playersRemaining = requiredPlayers - this.players.size();
-            if (playersRemaining > 0) {
-                // Cancel begin timer task
-                this.timerTask.cancel();
+                    // Update server status
+                    this.status = RFBStatus.WAITING_FOR_PLAYERS;
+                    plugin.getPersistence().updateServerStatus(this.status);
 
-                // Update server status
-                this.status = RFBStatus.WAITING_FOR_PLAYERS;
-                plugin.getPersistence().updateServerStatus(this.status);
+                    // Update scoreboard
+                    this.rfbScoreboard.setMatchPlayers(this.requiredPlayers - this.players.size(), false);
+                }
+                break;
+            case IN_PROGRESS:
+                // Save player stats
+                player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+                player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+                this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
+
+                this.broadcastMessage(String.format("%s[%s] %squit the game", ChatColor.RED, playerName, ChatColor.DARK_GRAY));
+                this.verifyGameOver();
 
                 // Update scoreboard
-                this.rfbScoreboard.setMatchPlayers(this.requiredPlayers - this.players.size(), false);
+                this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
+                break;
+            default:
+                break;
             }
-            break;
-        case IN_PROGRESS:
-            // Save player stats
-            player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
-            player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-            this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-
-            this.broadcastMessage(String.format("%s[%s] %squit the game", ChatColor.RED, playerName, ChatColor.DARK_GRAY));
-            this.verifyGameOver();
-
-            // Update scoreboard
-            this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
-            break;
-        default:
-            break;
         }
     }
 
