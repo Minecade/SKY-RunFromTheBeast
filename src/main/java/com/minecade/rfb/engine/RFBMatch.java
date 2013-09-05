@@ -147,7 +147,7 @@ public class RFBMatch {
                         optionalBeast.getBukkitPlayer().sendMessage(String.format("%sYou could be selected as Beast easily!", ChatColor.DARK_GRAY));
                     }
                 }
-            } 
+            }
         } else if (this.players.size() < this.maxPlayers) {
 
             if (player.getPlayerModel().isVip()) {
@@ -658,6 +658,13 @@ public class RFBMatch {
                 Player bukkitDamager = (Player) ((EntityDamageByEntityEvent) event).getDamager();
                 RFBPlayer attackVictim = this.players.get(bukkitPlayer.getName());
                 RFBPlayer attackDamager = this.players.get(bukkitDamager.getName());
+                
+                //damage was caused for other kind of entity.
+                if (attackDamager == null || attackVictim == null){
+                    event.setCancelled(true);
+                    return;
+                }
+                
                 if (!(attackVictim.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))
                         && !(attackDamager.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))) {
                     event.setCancelled(true);
