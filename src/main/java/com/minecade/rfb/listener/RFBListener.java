@@ -168,7 +168,5 @@ public class RFBListener implements Listener {
         if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
             this.match.rightClick(event);
         }
-        
-        plugin.getServer().getLogger().info(String.format("onPlayerInteract - Player: [%s]", event.getPlayer()));
     }
 }
