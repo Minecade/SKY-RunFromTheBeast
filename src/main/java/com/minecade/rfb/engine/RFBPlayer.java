@@ -2,6 +2,7 @@ package com.minecade.rfb.engine;
 
 import org.bukkit.entity.Player;
 
+import com.minecade.engine.data.MinecadeAccount;
 import com.minecade.engine.enums.PlayerTagEnum;
 import com.minecade.rfb.data.PlayerModel;
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
@@ -11,6 +12,20 @@ public class RFBPlayer {
     private Player bukkitPlayer;
 
     private boolean inAir;
+    
+    private String lastDamageBy;
+    
+    private PlayerModel playerModel;
+    
+    private String lastMessage;
+
+    public String getLastDamageBy() {
+        return lastDamageBy;
+    }
+
+    public void setLastDamageBy(String lastDamageBy) {
+        this.lastDamageBy = lastDamageBy;
+    }
 
     public boolean isInAir() {
         return inAir;
@@ -27,9 +42,7 @@ public class RFBPlayer {
     public void setBukkitPlayer(Player bukkitPlayer) {
         this.bukkitPlayer = bukkitPlayer;
     }
-
-    private PlayerModel playerModel;
-
+    
     public PlayerModel getPlayerModel() {
         return this.playerModel;
     }
@@ -37,8 +50,25 @@ public class RFBPlayer {
     public void setPlayerModel(PlayerModel playerModel) {
         this.playerModel = playerModel;
     }
+    
+    private MinecadeAccount minecadeAccount;
 
-    private String lastMessage;
+    /**
+     * Gets the minecadeAccount
+     * @return minecadeAccount
+     * @author kunamo
+     */
+    public MinecadeAccount getMinecadeAccount() {
+        return this.minecadeAccount;
+    }
+
+    /**
+     * Sets the minecadeAccount
+     * @author kunamo
+     */
+    public void setMinecadeAccount(MinecadeAccount minecadeAccount) {
+        this.minecadeAccount = minecadeAccount;
+    }
 
     public String getLastMessage() {
         return lastMessage;
@@ -49,37 +79,13 @@ public class RFBPlayer {
     }
 
     /**
-     * 
-     * @return
-     * @author jdgil
-     */
-    public PlayerTagEnum getTag() {
-
-        if (this.getBukkitPlayer().isOp())
-            return PlayerTagEnum.OP;
-
-        if (this.playerModel.isAdmin())
-            return PlayerTagEnum.ADMIN;
-
-        if (this.playerModel.isCm())
-            return PlayerTagEnum.CM;
-
-        if (this.playerModel.isGm())
-            return PlayerTagEnum.GM;
-
-        if (this.playerModel.isVip())
-            return PlayerTagEnum.VIP;
-
-        return PlayerTagEnum.DEFAULT;
-    }
-
-    /**
      * @param bukkitPlayer
      * @author jdgil
      */
     public RFBPlayer(RunFromTheBeastPlugin plugin, Player bukkitPlayer) {
         this.bukkitPlayer = bukkitPlayer;
-        plugin.getPersistence().getPlayer(this);
+        this.playerModel = plugin.getPersistence().getPlayer(bukkitPlayer.getName());
+        this.minecadeAccount = plugin.getPersistence().getMinecadeAccount(bukkitPlayer.getName());
     }
 
 }

@@ -7,7 +7,7 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
-import com.minecade.rfb.enums.RFBPlayerTag;
+import com.minecade.engine.enums.PlayerTagEnum;
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
 
 public class RFBScoreBoard {
@@ -24,12 +24,12 @@ public class RFBScoreBoard {
     /**
      * Scoreboard players to start
      */
-    private final String PLAYERS = "Players";
+    private final String PLAYERS_TO_START = "Players to Start";
     
     /**
      * Scoreboard players to start
      */
-    private final String PLAYERS_TO_START = "Players to Start";
+    private final String PLAYERS = "Players";     
     
     /**
      * Scoreboard players left
@@ -61,25 +61,31 @@ public class RFBScoreBoard {
      * @author jdgil
      */
     public RFBScoreBoard(RunFromTheBeastPlugin plugin){
-        // Creates new scoreboard
+     // Creates new scoreboard
         this.scoreboard =  plugin.getServer().getScoreboardManager().getNewScoreboard();
         
+        // Create teams
+        if(this.scoreboard.getTeams().isEmpty()){
+            for(PlayerTagEnum tag: PlayerTagEnum.values()){
+                this.scoreboard.registerNewTeam(tag.name()).setPrefix(tag.getPrefix());
+            }
+        }
+    }
+    
+    /**
+     * Init scoreboard
+     * @author kvnamo
+     */
+    public void init(){
         // Unregister previous scoreboard
         if (this.getScoreboardObjective() != null) {
             this.getScoreboardObjective().unregister();
         }
         
-        // Create teams
-        if(this.scoreboard.getTeams().isEmpty()){
-            for(RFBPlayerTag tag: RFBPlayerTag.values()){
-                this.scoreboard.registerNewTeam(tag.name()).setPrefix(tag.getPrefix());
-            }
-        }
-        
         // Setup scoreboard
         this.scoreboard.registerNewObjective(OBJECTIVE, "Run From The Beast")
             .setDisplayName(String.format("%s%s", ChatColor.YELLOW, TITLE)); 
-        this.getScoreboardObjective().setDisplaySlot(DisplaySlot.SIDEBAR);
+        this.getScoreboardObjective().setDisplaySlot(DisplaySlot.SIDEBAR);   
     }
     
     /**
@@ -88,18 +94,11 @@ public class RFBScoreBoard {
      * @author kvnamo
      */
     public void assignTeam(RFBPlayer player){
-        Team team = this.scoreboard.getTeam(player.getTag().name());
+        PlayerTagEnum playerTag = PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount());
+        
+        Team team = this.scoreboard.getTeam(playerTag.name());
         team.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
-        team.setPrefix(player.getTag().getPrefix());
-    }
-    
-    /**
-     * Sets the number of players necessaries to star the game
-     * @param playersToStart
-     * @author kvnamo
-     */
-    public void setPlayersToStart(int matchPlayers){
-        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(PLAYERS)).setScore(matchPlayers);
+        team.setPrefix(playerTag.getPrefix());
     }
     
     /**
@@ -121,3 +120,4 @@ public class RFBScoreBoard {
         this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(TIME_LEFT)).setScore(timeLeft);
     }
 }
+
