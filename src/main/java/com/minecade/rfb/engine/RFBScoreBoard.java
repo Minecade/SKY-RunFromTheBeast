@@ -7,7 +7,7 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
-import com.minecade.rfb.enums.RFBPlayerTag;
+import com.minecade.engine.enums.PlayerTagEnum;
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
 
 public class RFBScoreBoard {
@@ -66,7 +66,7 @@ public class RFBScoreBoard {
         
         // Create teams
         if(this.scoreboard.getTeams().isEmpty()){
-            for(RFBPlayerTag tag: RFBPlayerTag.values()){
+            for(PlayerTagEnum tag: PlayerTagEnum.values()){
                 this.scoreboard.registerNewTeam(tag.name()).setPrefix(tag.getPrefix());
             }
         }
