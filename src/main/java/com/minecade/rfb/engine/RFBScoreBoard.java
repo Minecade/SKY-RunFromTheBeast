@@ -24,6 +24,11 @@ public class RFBScoreBoard {
     /**
      * Scoreboard players to start
      */
+    private final String PLAYERS_TO_START = "Players to Start";
+    
+    /**
+     * Scoreboard players to start
+     */
     private final String PLAYERS = "Players";     
     
     /**
@@ -56,13 +61,8 @@ public class RFBScoreBoard {
      * @author jdgil
      */
     public RFBScoreBoard(RunFromTheBeastPlugin plugin){
-        // Creates new scoreboard
+     // Creates new scoreboard
         this.scoreboard =  plugin.getServer().getScoreboardManager().getNewScoreboard();
-        
-        // Unregister previous scoreboard
-        if (this.getScoreboardObjective() != null) {
-            this.getScoreboardObjective().unregister();
-        }
         
         // Create teams
         if(this.scoreboard.getTeams().isEmpty()){
@@ -70,11 +70,22 @@ public class RFBScoreBoard {
                 this.scoreboard.registerNewTeam(tag.name()).setPrefix(tag.getPrefix());
             }
         }
+    }
+    
+    /**
+     * Init scoreboard
+     * @author kvnamo
+     */
+    public void init(){
+        // Unregister previous scoreboard
+        if (this.getScoreboardObjective() != null) {
+            this.getScoreboardObjective().unregister();
+        }
         
         // Setup scoreboard
         this.scoreboard.registerNewObjective(OBJECTIVE, "Run From The Beast")
             .setDisplayName(String.format("%s%s", ChatColor.YELLOW, TITLE)); 
-        this.getScoreboardObjective().setDisplaySlot(DisplaySlot.SIDEBAR);
+        this.getScoreboardObjective().setDisplaySlot(DisplaySlot.SIDEBAR);   
     }
     
     /**
@@ -83,9 +94,11 @@ public class RFBScoreBoard {
      * @author kvnamo
      */
     public void assignTeam(RFBPlayer player){
-        Team team = this.scoreboard.getTeam(player.getTag().name());
+        PlayerTagEnum playerTag = PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount());
+        
+        Team team = this.scoreboard.getTeam(playerTag.name());
         team.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
-        team.setPrefix(player.getTag().getPrefix());
+        team.setPrefix(playerTag.getPrefix());
     }
     
     /**
@@ -93,8 +106,9 @@ public class RFBScoreBoard {
      * @param playersToStart
      * @author kvnamo
      */
-    public void setMatchPlayers(int matchPlayers){
-        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(PLAYERS)).setScore(matchPlayers);
+    public void setMatchPlayers(int matchPlayers, boolean matchStarted){
+        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(
+                matchStarted ? PLAYERS : PLAYERS_TO_START)).setScore(matchPlayers);
     }
     
     /**
@@ -106,3 +120,4 @@ public class RFBScoreBoard {
         this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(TIME_LEFT)).setScore(timeLeft);
     }
 }
+

@@ -32,6 +32,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 
 import com.minecade.engine.MinecadeWorld;
+import com.minecade.engine.enums.PlayerTagEnum;
 import com.minecade.engine.task.FireworksTask;
 import com.minecade.engine.utils.EngineUtils;
 import com.minecade.rfb.enums.RFBInventoryEnum;
@@ -126,7 +127,7 @@ public class RFBMatch {
 
         if (RFBStatus.WAITING_FOR_PLAYERS.equals(this.status)) {
             this.players.put(bukkitPlayer.getName(), player);
-            this.rfbScoreboard.setMatchPlayers(this.requiredPlayers - this.players.size());
+            this.rfbScoreboard.setMatchPlayers(this.requiredPlayers - this.players.size(), false);
 
             int playersRemaining = requiredPlayers - this.players.size();
 
@@ -164,7 +165,7 @@ public class RFBMatch {
             if (player.getPlayerModel().isVip()) {
                 this.players.put(bukkitPlayer.getName(), player);
 
-                this.rfbScoreboard.setMatchPlayers(this.players.size());
+                this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
             } else if (plugin.getPersistence().isPlayerStaff(bukkitPlayer)) {
                 this.hidePlayer(bukkitPlayer);
                 this.spectators.put(bukkitPlayer.getName(), player);
@@ -208,9 +209,14 @@ public class RFBMatch {
         }
         this.broadcastMessageToRunners(String.format("%sRunners, get ready!", ChatColor.DARK_GRAY));
         this.broadcastMessageToRunners(String.format("%sYou will be free in %s[0]", ChatColor.DARK_GRAY, ChatColor.RED));
+        
         // Create the task for the count down, freedom for runners
         this.timerTask = new TimerTask(this, this.readyCountdown, false, true, false, false);
         this.timerTask.runTaskTimer(this.plugin, 1l, 20l);
+        
+        // Update scoreboard
+        this.rfbScoreboard.init();
+        this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
     }
 
     private RFBPlayer selectBeast(Collection<RFBPlayer> players) {
@@ -261,8 +267,6 @@ public class RFBMatch {
         // Update server status
         this.status = RFBStatus.IN_PROGRESS;
         plugin.getPersistence().updateServerStatus(this.status);
-
-        this.rfbScoreboard.setMatchPlayers(this.players.size());
 
         this.timeLeft = this.time;
         this.timerTask = new TimerTask(this, this.timeLeft, false, false, true, false);
@@ -499,7 +503,7 @@ public class RFBMatch {
                     EngineUtils.disconnect(player.getBukkitPlayer(), LOBBY, String.format("The beast has killed you, thanks for playing!"));
                     this.broadcastMessage(String.format("%s[%s] %slost.", ChatColor.RED, player.getBukkitPlayer().getName(), ChatColor.DARK_GRAY));
 
-                    this.rfbScoreboard.setMatchPlayers(this.players.size());
+                    this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
                     this.verifyGameOver();
                 }
                 // Check if it is a kill
@@ -554,7 +558,7 @@ public class RFBMatch {
             this.timerTask.cancel();
 
             // Update scoreboard
-            this.rfbScoreboard.setMatchPlayers(this.requiredPlayers - this.players.size());
+            this.rfbScoreboard.setMatchPlayers(this.requiredPlayers - this.players.size(), false);
         } else if (RFBStatus.IN_PROGRESS.equals(this.status) && player != null) {
             // Save player stats
             player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
@@ -565,8 +569,8 @@ public class RFBMatch {
             this.verifyGameOver();
 
             // Update scoreboard
-            this.rfbScoreboard.setMatchPlayers(this.players.size());
-        }
+            this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
+        }       
     }
 
     /**
@@ -651,7 +655,7 @@ public class RFBMatch {
                         bukkitPlayer.sendMessage(String.format("%s You are now spectating the game.", ChatColor.YELLOW));
                         this.broadcastMessage(String.format("%s[%s] %slost.", ChatColor.RED, bukkitPlayer.getName(), ChatColor.GRAY));
 
-                        this.rfbScoreboard.setMatchPlayers(this.players.size());
+                        this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
                         this.verifyGameOver();
                     }
                     break;
@@ -759,7 +763,8 @@ public class RFBMatch {
         }
 
         player.setLastMessage(event.getMessage().toLowerCase());
-        event.setFormat(player.getTag().getPrefix() + ChatColor.WHITE + "%s" + ChatColor.GRAY + ": %s");
+        PlayerTagEnum playerTag = PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount());
+        event.setFormat(playerTag.getPrefix() + ChatColor.WHITE + "%s" + ChatColor.GRAY + ": %s");
     }
 
     /**

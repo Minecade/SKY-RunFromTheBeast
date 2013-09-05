@@ -51,15 +51,15 @@ public class RFBPersistence extends MinecadePersistence {
      * @param playerName
      * @author kvnamo
      */
-    public void getPlayer(RFBPlayer player){
+    public PlayerModel getPlayer(String playerName){
         // Find player in database
         PlayerModel playerModel = this.plugin.getDatabase().find(PlayerModel.class)
-            .where().eq("username", player.getBukkitPlayer().getName()).findUnique();
+            .where().eq("username", playerName).findUnique();
         
         // Creates a new bean that is managed by bukkit
         if(playerModel == null){ 
             playerModel = this.plugin.getDatabase().createEntityBean(PlayerModel.class);
-            playerModel.setUsername(player.getBukkitPlayer().getName());
+            playerModel.setUsername(playerName);
             playerModel.setKills(0);
             playerModel.setDeaths(0);
             playerModel.setWins(0);
@@ -71,16 +71,16 @@ public class RFBPersistence extends MinecadePersistence {
             this.plugin.getDatabase().save(playerModel);
         }
         
-        MinecadeAccount account = getMinecadeAccount(player.getBukkitPlayer().getName());
-        
-        if(account != null) {
-            playerModel.setAdmin(account.isAdmin());
-            playerModel.setCm(account.isCm());
-            playerModel.setGm(account.isGm());
-            playerModel.setVip(account.isVip());
-        }
-
-        player.setPlayerModel(playerModel);
+        return playerModel;
+    }
+    
+    /**
+     * Gets the minecade account
+     * @param playerName
+     * @return MinecadeAccount
+     */
+    public MinecadeAccount getMinecadeAccount(String playerName){
+        return super.getMinecadeAccount(playerName);
     }
 
     /**
