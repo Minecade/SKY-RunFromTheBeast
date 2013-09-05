@@ -94,9 +94,7 @@ public class RFBScoreBoard {
      * @author kvnamo
      */
     public void setMatchPlayers(int matchPlayers){
-        if(matchPlayers > 0){
-            this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(PLAYERS)).setScore(matchPlayers);
-        }
+        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(PLAYERS)).setScore(matchPlayers);
     }
     
     /**

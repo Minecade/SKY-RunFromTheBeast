@@ -119,7 +119,7 @@ public class RFBMatch {
 
         if (RFBStatus.WAITING_FOR_PLAYERS.equals(this.status)) {
             this.players.put(bukkitPlayer.getName(), player);
-            this.rfbScoreboard.setMatchPlayers(this.players.size());
+            this.rfbScoreboard.setMatchPlayers(this.requiredPlayers - this.players.size());
 
             int playersRemaining = requiredPlayers - this.players.size();
 
@@ -141,10 +141,7 @@ public class RFBMatch {
                         optionalBeast.getBukkitPlayer().sendMessage(String.format("%sYou could be selected as Beast easily!", ChatColor.DARK_GRAY));
                     }
                 }
-            } else {
-                this.broadcastMessage(String.format("%sWe need %s[%s] %splayer(s) to start.", ChatColor.DARK_GRAY, ChatColor.RED, playersRemaining,
-                        ChatColor.DARK_GRAY));
-            }
+            } 
         } else if (this.players.size() < this.maxPlayers) {
 
             if (player.getPlayerModel().isVip()) {
@@ -519,6 +516,9 @@ public class RFBMatch {
 
             // Cancel begin timer task
             this.timerTask.cancel();
+            
+            // Update scoreboard
+            this.rfbScoreboard.setMatchPlayers(this.requiredPlayers - this.players.size());
         } else if (RFBStatus.IN_PROGRESS.equals(this.status) && player != null) {
             // Save player stats
             player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
@@ -527,10 +527,10 @@ public class RFBMatch {
 
             this.broadcastMessage(String.format("%s[%s] %squit the game", ChatColor.RED, playerName, ChatColor.DARK_GRAY));
             this.verifyGameOver();
-        }
-
-        // Update scoreboard
-        this.rfbScoreboard.setMatchPlayers(this.players.size());
+            
+            // Update scoreboard
+            this.rfbScoreboard.setMatchPlayers(this.players.size());
+        }       
     }
 
     /**
