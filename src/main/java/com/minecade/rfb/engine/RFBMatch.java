@@ -1,6 +1,7 @@
 package com.minecade.rfb.engine;
 
 import java.text.DateFormat;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -26,10 +27,13 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.WorldInitEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BookMeta;
 
 import com.minecade.engine.MinecadeWorld;
 import com.minecade.engine.task.FireworksTask;
 import com.minecade.engine.utils.EngineUtils;
+import com.minecade.rfb.enums.RFBInventoryEnum;
 import com.minecade.rfb.enums.RFBStatus;
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
 import com.minecade.rfb.task.TimerTask;
@@ -112,6 +116,8 @@ public class RFBMatch {
 
         final RFBPlayer player = new RFBPlayer(this.plugin, bukkitPlayer);
         EngineUtils.clearBukkitPlayer(bukkitPlayer);
+        
+        this.setupInventoryToMatch(player);
 
         // Setup scoreboard
         this.rfbScoreboard.assignTeam(player);
@@ -133,7 +139,6 @@ public class RFBMatch {
                 this.timerTask = new TimerTask(this, this.timeLeft, true, false, false, false);
                 this.timerTask.runTaskTimer(this.plugin, 1l, 20l);
                 this.broadcastMessage(String.format("%s[%s] %splayers reached, the match will begin soon", ChatColor.RED, this.players.size(), ChatColor.DARK_GRAY));
-                //TODO
                 // Set beast.
                 for (RFBPlayer optionalBeast : this.players.values()) {
                     if(optionalBeast.getPlayerModel().isVip() && this.isBeastVipDialyPassEnable(optionalBeast)){
@@ -181,8 +186,8 @@ public class RFBMatch {
 
             for (RFBPlayer player : this.players.values()) {
                 player.getBukkitPlayer().setGameMode(GameMode.SURVIVAL);
+                EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
                 if (!player.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
-                    EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
                     player.getBukkitPlayer().teleport(this.arena.getRandomSpawn());
                 }
             }
@@ -453,6 +458,7 @@ public class RFBMatch {
 
                         // Save stats in database for the loser: Beast.
                         beast.getPlayerModel().setLosses(beast.getPlayerModel().getLosses() + 1);
+                        beast.getPlayerModel().setDeaths(beast.getPlayerModel().getDeaths() + 1);
                         beast.getPlayerModel().setTimePlayed(beast.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
                         this.plugin.getPersistence().updatePlayer(beast.getPlayerModel());
                     }
@@ -478,7 +484,16 @@ public class RFBMatch {
                     this.rfbScoreboard.setMatchPlayers(this.players.size());
                     this.verifyGameOver();
                 }
-
+                // Check if it is a kill
+                RFBPlayer killer = player.getLastDamageBy() != null ? this.players.get(player.getLastDamageBy()) : null;
+                
+                if(killer != null){
+                    player.setLastDamageBy(null);
+                    killer.getPlayerModel().setKills(killer.getPlayerModel().getKills() + 1);
+                     // Announce kill
+                    this.broadcastMessage(String.format("%s%s %skilled by %s%s", ChatColor.RED, 
+                        bukkitPlayer.getName(), ChatColor.DARK_GRAY, ChatColor.RED, killer.getBukkitPlayer().getName()));
+                }
             }
             break;
         case RESTARTING:
@@ -643,6 +658,8 @@ public class RFBMatch {
                 if (!(attackVictim.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))
                         && !(attackDamager.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))) {
                     event.setCancelled(true);
+                }else{
+                    attackVictim.setLastDamageBy(attackDamager.getBukkitPlayer().getName());
                 }
                 break;
             default:
@@ -650,6 +667,46 @@ public class RFBMatch {
 
             }
         }
+    }
+    
+    /**
+     * Gets inventory player ready for match 
+     * @param message
+     * @author jdgil
+     */
+    private void setupInventoryToMatch(RFBPlayer player){ 
+        EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+        player.getBukkitPlayer().getInventory().addItem(RFBInventoryEnum.INSTRUCTIONS.getItemStack());
+        player.getBukkitPlayer().getInventory().addItem(this.getPlayerStats(player));
+        player.getBukkitPlayer().getInventory().addItem(RFBInventoryEnum.LEAVE_COMPASS.getItemStack());
+    }
+    
+    /**
+     * Loads the player stats
+     * @author jdgil
+     */
+    private ItemStack getPlayerStats(RFBPlayer player) {
+        
+        ItemStack stats = RFBInventoryEnum.STATS_BOOK.getItemStack();
+        BookMeta statsMeta = (BookMeta) stats.getItemMeta();
+        
+        DecimalFormat decimalFormat = new DecimalFormat("0.000");
+        String kdr = (double)player.getPlayerModel().getLosses() == 0 ? 
+                "0" : decimalFormat.format((double)player.getPlayerModel().getKills() / (double)player.getPlayerModel().getLosses());
+        String timePlayed = decimalFormat.format((double)player.getPlayerModel().getTimePlayed() / (double)86400);
+        
+        statsMeta.setPages(
+            String.format("%s%s%s STATS! \n\n\n%s %sWins: %s%s\n %sKills: %s%s\n %sDeaths: %s%s\n %sLooses: %s%s\n %sKDR: %s%s\n %sTime played: %s%s days.",
+                ChatColor.BOLD, ChatColor.RED, player.getBukkitPlayer().getName().toUpperCase(), ChatColor.DARK_GRAY,
+                ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getWins(),
+                ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getKills(),
+                ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getDeaths(),
+                ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getLosses(),
+                ChatColor.BOLD, ChatColor.DARK_GRAY, kdr,
+                ChatColor.BOLD, ChatColor.DARK_GRAY, timePlayed));
+        stats.setItemMeta(statsMeta);
+        
+        return stats;
     }
 
     /**

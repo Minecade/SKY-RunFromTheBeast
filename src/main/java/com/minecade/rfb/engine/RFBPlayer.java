@@ -11,6 +11,20 @@ public class RFBPlayer {
     private Player bukkitPlayer;
 
     private boolean inAir;
+    
+    private String lastDamageBy;
+    
+    private PlayerModel playerModel;
+    
+    private String lastMessage;
+
+    public String getLastDamageBy() {
+        return lastDamageBy;
+    }
+
+    public void setLastDamageBy(String lastDamageBy) {
+        this.lastDamageBy = lastDamageBy;
+    }
 
     public boolean isInAir() {
         return inAir;
@@ -27,9 +41,7 @@ public class RFBPlayer {
     public void setBukkitPlayer(Player bukkitPlayer) {
         this.bukkitPlayer = bukkitPlayer;
     }
-
-    private PlayerModel playerModel;
-
+    
     public PlayerModel getPlayerModel() {
         return this.playerModel;
     }
@@ -37,8 +49,6 @@ public class RFBPlayer {
     public void setPlayerModel(PlayerModel playerModel) {
         this.playerModel = playerModel;
     }
-
-    private String lastMessage;
 
     public String getLastMessage() {
         return lastMessage;
