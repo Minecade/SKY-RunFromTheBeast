@@ -99,7 +99,7 @@ public class RFBMatch {
      * @param PlayerJoinEvent
      * @author jdgil
      */
-    public void playerJoin(PlayerJoinEvent event) {
+    public synchronized void playerJoin(PlayerJoinEvent event) {
         final Player bukkitPlayer = event.getPlayer();
         bukkitPlayer.setAllowFlight(false);
 
@@ -187,7 +187,7 @@ public class RFBMatch {
      * 
      * @author jdgil
      */
-    public void initMatch() {
+    public synchronized void initMatch() {
         this.arena = plugin.getRandomWorld();
 
         synchronized (this.players) {
@@ -257,7 +257,7 @@ public class RFBMatch {
      * 
      * @author kvnamo
      */
-    public void startMatch() {
+    public synchronized void startMatch() {
         // Update server status
         this.status = RFBStatus.IN_PROGRESS;
         plugin.getPersistence().updateServerStatus(this.status);
@@ -533,7 +533,7 @@ public class RFBMatch {
      *            .
      * @author: jdgil
      */
-    public void playerQuit(PlayerQuitEvent event) {
+    public synchronized void playerQuit(PlayerQuitEvent event) {
         String playerName = event.getPlayer().getName();
 
         final RFBPlayer player = this.players.get(playerName);
