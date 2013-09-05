@@ -143,8 +143,8 @@ public class RFBMatch {
                 // Set beast.
                 for (RFBPlayer optionalBeast : this.players.values()) {
                     if(optionalBeast.getPlayerModel().isVip() && this.isBeastVipDialyPassEnable(optionalBeast)){
-                        optionalBeast.getBukkitPlayer().sendMessage(String.format("%sYou Have enable your Dialy Beast %sVIP %sPass", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
-                        optionalBeast.getBukkitPlayer().sendMessage(String.format("%sYou could be selected as Beast easily!", ChatColor.DARK_GRAY));
+                        optionalBeast.getBukkitPlayer().sendMessage(String.format("%sYou have enabled your Daily Beast %sVIP %sPass", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
+                        optionalBeast.getBukkitPlayer().sendMessage(String.format("%sYou have a higher chance of becoming the beast!", ChatColor.DARK_GRAY));
                     }
                 }
             }
@@ -193,8 +193,8 @@ public class RFBMatch {
                 }
             }
         }
-        this.broadcastMessageToRunners(String.format("%sRunners be prepared to run soon", ChatColor.DARK_GRAY));
-        this.broadcastMessageToRunners(String.format("%sYou will be free when countdown get %s[0]", ChatColor.DARK_GRAY, ChatColor.RED));
+        this.broadcastMessageToRunners(String.format("%sRunners, get ready!", ChatColor.DARK_GRAY));
+        this.broadcastMessageToRunners(String.format("%sYou will be free in %s[0]", ChatColor.DARK_GRAY, ChatColor.RED));
         // Create the task for the count down, freedom for runners
         this.timerTask = new TimerTask(this, this.readyCountdown, false, true, false, false);
         this.timerTask.runTaskTimer(this.plugin, 1l, 20l);
@@ -212,7 +212,7 @@ public class RFBMatch {
             playerSelected.getPlayerModel().setBeastPass(DateUtils.truncate(new Date(), Calendar.DATE));
             this.plugin.getPersistence().updatePlayer(playerSelected.getPlayerModel());
             
-            playerSelected.getBukkitPlayer().sendMessage(String.format("%sSystem has used your Dialy Beast %sVIP %sPass", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
+            playerSelected.getBukkitPlayer().sendMessage(String.format("%sSystem has used your Daily Beast %sVIP %sPass", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
             return playerSelected;
         }
         return (RFBPlayer) players.toArray()[plugin.getRandom().nextInt(players.size())];
@@ -262,7 +262,7 @@ public class RFBMatch {
                 player.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getFreeRunnersRandomSpawn());
             }
         }
-        this.broadcastMessageToBeast(String.format("%sBe prepared, get your weapon and armor", ChatColor.DARK_GRAY));
+        this.broadcastMessageToBeast(String.format("%sBe prepared, get your weapon and armor!", ChatColor.DARK_GRAY));
         this.broadcastMessageToBeast(String.format("%sYou will be free in %s[%s] %sseconds", ChatColor.DARK_GRAY, ChatColor.RED, this.beastFreedomCountdown, ChatColor.DARK_GRAY));
         // Free the beast task
         this.plugin.getServer().getScheduler().runTaskLater(this.plugin, new Runnable() {
