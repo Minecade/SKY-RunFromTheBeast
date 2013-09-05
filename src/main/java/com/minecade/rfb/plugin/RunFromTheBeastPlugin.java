@@ -12,12 +12,13 @@ import com.minecade.engine.MinecadeWorld;
 import com.minecade.engine.command.CommandFactory;
 import com.minecade.rfb.data.RFBPersistence;
 import com.minecade.rfb.listener.RFBListener;
-import com.minecade.rfb.worlds.RFBLobbyWorld;
 import com.minecade.rfb.worlds.HaloRaceWorld;
+import com.minecade.rfb.worlds.RFBLobbyWorld;
 
 public class RunFromTheBeastPlugin extends MinecadePlugin {
 
     private MinecadeWorld lobby;
+    
     private List<MinecadeWorld> runFromTheBeastWorlds = new ArrayList<MinecadeWorld>();
     
     private static final String BUTTERSLAP_COMMANDS_PACKAGE = "com.minecade.bs.command";
@@ -37,6 +38,13 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
     }
     
     /**
+     * @return the lobby
+     */
+    public MinecadeWorld getLobby() {
+        return lobby;
+    }
+
+    /**
      * (non-Javadoc)
      * @see org.bukkit.plugin.java.JavaPlugin#onEnable()
      * @tip: 
@@ -48,9 +56,11 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
     public void onEnable(){
         super.onEnable();
         getLogger().info("onEnable has been invoked!");
+        
         // Save config.yml default values and completes the new values from the jar file
         saveDefaultConfig();
         getConfig().options().copyDefaults(true);
+        
         // Register listeners
         getServer().getPluginManager().registerEvents(new RFBListener(this), this);
         
