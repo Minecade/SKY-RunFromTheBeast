@@ -24,7 +24,12 @@ public class RFBScoreBoard {
     /**
      * Scoreboard players to start
      */
-    private final String PLAYERS = "Players";     
+    private final String PLAYERS = "Players";
+    
+    /**
+     * Scoreboard players to start
+     */
+    private final String PLAYERS_TO_START = "Players to Start";
     
     /**
      * Scoreboard players left
@@ -93,8 +98,18 @@ public class RFBScoreBoard {
      * @param playersToStart
      * @author kvnamo
      */
-    public void setMatchPlayers(int matchPlayers){
+    public void setPlayersToStart(int matchPlayers){
         this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(PLAYERS)).setScore(matchPlayers);
+    }
+    
+    /**
+     * Sets the number of players necessaries to star the game
+     * @param playersToStart
+     * @author kvnamo
+     */
+    public void setMatchPlayers(int matchPlayers, boolean matchStarted){
+        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(
+                matchStarted ? PLAYERS : PLAYERS_TO_START)).setScore(matchPlayers);
     }
     
     /**
