@@ -56,8 +56,10 @@ public class RFBListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         // Remove join message.
         event.setJoinMessage(null);
-        this.match.playerJoin(event);
-        this.plugin.getServer().getLogger().info("onPlayerJoin");
+        synchronized (this.match) {
+            this.match.playerJoin(event);
+            this.plugin.getServer().getLogger().info("onPlayerJoin: " + event.getPlayer().getName());
+        }        
     }
     
     /**
