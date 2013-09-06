@@ -9,7 +9,7 @@
   
   <groupId>com.minecade.minecade-build</groupId>
   <artifactId>minecade-run-from-the-beast</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.0.2-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>minecade-run-from-the-beast</name>
   

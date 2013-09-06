@@ -18,13 +18,11 @@ import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.WorldInitEvent;
 
-import com.minecade.rfb.engine.RFBMatch;
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
 
 public class RFBListener implements Listener {
     
     private final RunFromTheBeastPlugin plugin;
-    private final RFBMatch match;
     
     /**
      * Listener constructor.
@@ -33,7 +31,6 @@ public class RFBListener implements Listener {
      */
     public RFBListener(RunFromTheBeastPlugin plugin){
         this.plugin = plugin;
-        this.match = new RFBMatch(this.plugin);
     }
     
     /**
@@ -43,7 +40,7 @@ public class RFBListener implements Listener {
      */
     @EventHandler
     public void onWorldInit(WorldInitEvent event) {
-        this.match.initWorld(event); 
+        this.plugin.getMatch().initWorld(event); 
         this.plugin.getServer().getLogger().info("onWorldInit");
     }
     
@@ -56,7 +53,7 @@ public class RFBListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         // Remove join message.
         event.setJoinMessage(null);
-        this.match.playerJoin(event);
+        this.plugin.getMatch().playerJoin(event);
         this.plugin.getServer().getLogger().info("onPlayerJoin: " + event.getPlayer().getName());
     }
     
@@ -69,7 +66,7 @@ public class RFBListener implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event){
         // Remove quit message.
         event.setQuitMessage(null);  
-        this.match.playerQuit(event);
+        this.plugin.getMatch().playerQuit(event);
         this.plugin.getServer().getLogger().info("onPlayerQuit");
     }
     
@@ -80,7 +77,7 @@ public class RFBListener implements Listener {
      */
     @EventHandler
     public void onEntityDamage(final EntityDamageEvent event) {
-        this.match.entityDamage(event);
+        this.plugin.getMatch().entityDamage(event);
         this.plugin.getServer().getLogger().info("onEntityDamage");
     }
     
@@ -91,7 +88,7 @@ public class RFBListener implements Listener {
      */
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
-        this.match.chatMessage(event);
+        this.plugin.getMatch().chatMessage(event);
         this.plugin.getServer().getLogger().info("onPlayerChat");
     }
     
@@ -142,7 +139,7 @@ public class RFBListener implements Listener {
      */
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = false)
     public void onBlockBreak(BlockBreakEvent event) {
-        this.match.blockBreak(event);
+        this.plugin.getMatch().blockBreak(event);
     }
     
     /**
@@ -154,7 +151,7 @@ public class RFBListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         // Remove quit message.
         event.setDeathMessage(null);
-        this.match.playerDeath(event);
+        this.plugin.getMatch().playerDeath(event);
         plugin.getServer().getLogger().info(String.format("onPlayerDeath - Player: [%s]", event.getEntity()));
     }
     
@@ -166,7 +163,7 @@ public class RFBListener implements Listener {
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = false)
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            this.match.rightClick(event);
+            this.plugin.getMatch().rightClick(event);
         }
     }
 }

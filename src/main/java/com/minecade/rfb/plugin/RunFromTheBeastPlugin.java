@@ -11,6 +11,7 @@ import com.minecade.engine.MinecadePlugin;
 import com.minecade.engine.MinecadeWorld;
 import com.minecade.engine.command.CommandFactory;
 import com.minecade.rfb.data.RFBPersistence;
+import com.minecade.rfb.engine.RFBMatch;
 import com.minecade.rfb.listener.RFBListener;
 import com.minecade.rfb.worlds.HaloRaceWorld;
 import com.minecade.rfb.worlds.RFBLobbyWorld;
@@ -21,7 +22,7 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
     
     private List<MinecadeWorld> runFromTheBeastWorlds = new ArrayList<MinecadeWorld>();
     
-    private static final String BUTTERSLAP_COMMANDS_PACKAGE = "com.minecade.bs.command";
+    private static final String RUNFROMTHEBEAST_COMMANDS_PACKAGE = "com.minecade.rfb.command";
     
     private RFBPersistence persistence;  
     
@@ -42,6 +43,17 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
      */
     public MinecadeWorld getLobby() {
         return lobby;
+    }
+    
+    private RFBMatch match; 
+    
+    /**
+     * Get match
+     * @return match
+     * @author kvnamo
+     */
+    public RFBMatch getMatch() {
+        return match;
     }
 
     /**
@@ -65,18 +77,18 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
         getServer().getPluginManager().registerEvents(new RFBListener(this), this);
         
         // register commands
-        CommandFactory.registerCommands(this, BUTTERSLAP_COMMANDS_PACKAGE);
+        CommandFactory.registerCommands(this, RUNFROMTHEBEAST_COMMANDS_PACKAGE);
         
         // Initialize persistence
         this.persistence = new RFBPersistence(this);
         
+        // Initialize match.
+        this.match = new RFBMatch(this);
+        
         // Initialize Worlds
         getLogger().info("onEnable: Creating Worlds...");
-        lobby = new RFBLobbyWorld(this);
-        
-
+        lobby = new RFBLobbyWorld(this); 
         runFromTheBeastWorlds.add(new HaloRaceWorld(this));
-        
         getLogger().info("onEnable: Worlds Created...");
         
         // Create or update server status in DB.
@@ -126,5 +138,14 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
         getLogger().info("onDisable has been invoked!");
         // This will unregister all events from the specified plugin-
         HandlerList.unregisterAll(this);
+    }
+    
+    /**
+     * Force match start
+     * @author kvnamo
+     */
+    @Override
+    public String forceStart() {
+        return this.match.forceStartMatch();
     }
 }

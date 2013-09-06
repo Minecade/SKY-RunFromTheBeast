@@ -36,7 +36,7 @@ import com.minecade.engine.enums.PlayerTagEnum;
 import com.minecade.engine.task.FireworksTask;
 import com.minecade.engine.utils.EngineUtils;
 import com.minecade.rfb.enums.RFBInventoryEnum;
-import com.minecade.rfb.enums.RFBStatus;
+import com.minecade.rfb.enums.RFBStatusEnum;
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
 import com.minecade.rfb.task.TimerTask;
 import com.minecade.rfb.worlds.RFBBaseWorld;
@@ -51,7 +51,7 @@ public class RFBMatch {
 
     private RunFromTheBeastPlugin plugin;
     private Location lobbyLocation;
-    private volatile RFBStatus status = RFBStatus.WAITING_FOR_PLAYERS;
+    private volatile RFBStatusEnum status = RFBStatusEnum.WAITING_FOR_PLAYERS;
     private static final String LOBBY = "lobby";
     private Map<String, RFBPlayer> players;
     private int timeLeft;
@@ -138,7 +138,7 @@ public class RFBMatch {
 
             if (playersRemaining <= 0) {
                 // Update server status
-                this.status = RFBStatus.STARTING_MATCH;
+                this.status = RFBStatusEnum.STARTING_MATCH;
                 plugin.getPersistence().updateServerStatus(this.status);
 
                 // Begin match start timer
@@ -270,7 +270,7 @@ public class RFBMatch {
      */
     public synchronized void startMatch() {
         // Update server status
-        this.status = RFBStatus.IN_PROGRESS;
+        this.status = RFBStatusEnum.IN_PROGRESS;
         plugin.getPersistence().updateServerStatus(this.status);
 
         this.timeLeft = this.time;
@@ -300,6 +300,29 @@ public class RFBMatch {
             }
         }, this.beastFreedomCountdown * 20);
     }
+    
+    /**
+     *  Force match start
+     * @return error
+     * @author kvnamo 
+     */
+    public String forceStartMatch() {
+        // Check match status
+        if(this.status.equals(RFBStatusEnum.WAITING_FOR_PLAYERS)){
+            // Init match
+            this.initMatch();
+            // Cancel init match timer
+            if(this.timerTask != null){
+                this.timerTask.cancel();
+            }
+            // Start match immediatly
+            this.startMatch();
+            
+            return null;
+        }
+        
+        return "Server must be in Waiting For Players status to execute this command.";
+    }
 
     /**
      * Stop the game
@@ -308,7 +331,7 @@ public class RFBMatch {
      */
     public void stopGame() {
         // Update server status
-        this.status = RFBStatus.RESTARTING;
+        this.status = RFBStatusEnum.RESTARTING;
         plugin.getPersistence().updateServerStatus(this.status);
 
         // Send players and spectators to the lobby
@@ -396,7 +419,7 @@ public class RFBMatch {
         this.rfbScoreboard.setTimeLeft(timeLeft);
 
         for (RFBPlayer player : this.players.values()) {
-            if ((RFBStatus.STARTING_MATCH.equals(this.status) || RFBStatus.IN_PROGRESS.equals(this.status)) && timeLeft < 6) {
+            if ((RFBStatusEnum.STARTING_MATCH.equals(this.status) || RFBStatusEnum.IN_PROGRESS.equals(this.status)) && timeLeft < 6) {
                 player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);
             }
         }
@@ -559,7 +582,7 @@ public class RFBMatch {
                     this.timerTask.cancel();
 
                     // Update server status
-                    this.status = RFBStatus.WAITING_FOR_PLAYERS;
+                    this.status = RFBStatusEnum.WAITING_FOR_PLAYERS;
                     plugin.getPersistence().updateServerStatus(this.status);
 
                     // Update scoreboard
