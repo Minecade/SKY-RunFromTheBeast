@@ -34,4 +34,6 @@ commands:
     cm:
         description: Use it to add a CM (Ops only)
     uncm:
-        description: Use it to remove a CM (Ops only)
+        description: Use it to remove a CM (Ops only)    
+    forcestart:
+        description: Skip the validation to wait to complete the minimum players and force to start the game. (Ops only)
