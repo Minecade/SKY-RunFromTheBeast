@@ -31,6 +31,8 @@ public class RFBScoreBoard {
      */
     private final String PLAYERS = "Players";     
     
+    private final String BEAST = "BEAST";
+    
     /**
      * Scoreboard players left
      */
@@ -99,6 +101,19 @@ public class RFBScoreBoard {
         Team team = this.scoreboard.getTeam(playerTag.name());
         team.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
         team.setPrefix(playerTag.getPrefix());
+    }
+    
+    /**
+     * Assign beast to a new team
+     * @param player
+     * @author jdgil
+     */
+    public void assignBeast(RFBPlayer beast){
+        Team team = this.scoreboard.getTeam(PlayerTagEnum.getTag(beast.getBukkitPlayer(), beast.getMinecadeAccount()).name());
+        team.removePlayer(Bukkit.getOfflinePlayer(beast.getBukkitPlayer().getName()));
+        Team beastTeam = this.scoreboard.registerNewTeam(BEAST);
+        beastTeam.addPlayer(Bukkit.getOfflinePlayer(beast.getBukkitPlayer().getName()));
+        beastTeam.setPrefix(String.format("[%s%s%s%s] ", ChatColor.RED, ChatColor.BOLD, BEAST, ChatColor.RESET));
     }
     
     /**

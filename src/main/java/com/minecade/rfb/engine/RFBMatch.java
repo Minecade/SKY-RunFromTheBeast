@@ -30,6 +30,8 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import com.minecade.engine.MinecadeWorld;
 import com.minecade.engine.enums.PlayerTagEnum;
@@ -224,23 +226,29 @@ public class RFBMatch {
         this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
     }
 
-    private RFBPlayer selectBeast(Collection<RFBPlayer> players) {
-
+    private RFBPlayer selectBeast(Collection<RFBPlayer> players){
+        RFBPlayer beastSelected;
         Collection<RFBPlayer> vipPlayers = new ArrayList<RFBPlayer>();
         for (RFBPlayer player : players) {
             if (player.getPlayerModel().isVip() && this.isBeastVipDialyPassEnable(player))
                 vipPlayers.add(player);
         }
-        if (vipPlayers.size() > 0) {
-            RFBPlayer playerSelected = (RFBPlayer) vipPlayers.toArray()[plugin.getRandom().nextInt(vipPlayers.size())];
-            playerSelected.getPlayerModel().setBeastPass(DateUtils.truncate(new Date(), Calendar.DATE));
-            this.plugin.getPersistence().updatePlayer(playerSelected.getPlayerModel());
 
-            playerSelected.getBukkitPlayer().sendMessage(
-                    String.format("%sSystem has used your Daily Beast %sVIP %sPass", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
-            return playerSelected;
+        if(vipPlayers.size() > 0){
+            beastSelected =  (RFBPlayer) vipPlayers.toArray()[plugin.getRandom().nextInt(vipPlayers.size())];
+            beastSelected.getPlayerModel().setBeastPass(DateUtils.truncate(new Date(), Calendar.DATE));
+            this.plugin.getPersistence().updatePlayer(beastSelected.getPlayerModel());
+            
+            beastSelected.getBukkitPlayer().sendMessage(String.format("%sSystem has used your Dialy Beast %sVIP %sPass", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
+        }else{
+            beastSelected = (RFBPlayer) players.toArray()[plugin.getRandom().nextInt(players.size())];
         }
-        return (RFBPlayer) players.toArray()[plugin.getRandom().nextInt(players.size())];
+        
+        //set up scoreboard for the beast
+        this.rfbScoreboard.assignBeast(beastSelected);
+        beastSelected.getBukkitPlayer().setScoreboard(this.rfbScoreboard.getScoreboard());        
+
+        return beastSelected;
     }
 
     private boolean isBeastVipDialyPassEnable(RFBPlayer player) {
@@ -292,6 +300,11 @@ public class RFBMatch {
         this.broadcastMessageToBeast(String.format("%sBe prepared, get your weapon and armor!", ChatColor.DARK_GRAY));
         this.broadcastMessageToBeast(String.format("%sYou will be free in %s[%s] %sseconds", ChatColor.DARK_GRAY, ChatColor.RED, this.beastFreedomCountdown,
                 ChatColor.DARK_GRAY));
+        
+        //set jumpboost and speed2 to the beast
+        this.beast.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.JUMP, this.time * 20, 1));
+        this.beast.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, this.time * 20, 2));
+        this.plugin.getServer().getLogger().severe(String.format("jumpboost and speed2 to : %s", this.beast.getBukkitPlayer().getName()));
         // Free the beast task
         this.plugin.getServer().getScheduler().runTaskLater(this.plugin, new Runnable() {
             @Override
