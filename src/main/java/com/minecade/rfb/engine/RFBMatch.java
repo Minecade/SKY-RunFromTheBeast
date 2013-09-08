@@ -227,7 +227,7 @@ public class RFBMatch {
     }
 
     private RFBPlayer selectBeast(Collection<RFBPlayer> players){
-        RFBPlayer beastSelected;
+        final RFBPlayer beastSelected;
         Collection<RFBPlayer> vipPlayers = new ArrayList<RFBPlayer>();
         for (RFBPlayer player : players) {
             if (player.getPlayerModel().isVip() && this.isBeastVipDialyPassEnable(player))
@@ -240,14 +240,19 @@ public class RFBMatch {
             this.plugin.getPersistence().updatePlayer(beastSelected.getPlayerModel());
             
             beastSelected.getBukkitPlayer().sendMessage(String.format("%sSystem has used your Dialy Beast %sVIP %sPass", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
-        }else{
+        } else {
             beastSelected = (RFBPlayer) players.toArray()[plugin.getRandom().nextInt(players.size())];
         }
-        
-        //set up scoreboard for the beast
-        this.rfbScoreboard.assignBeast(beastSelected);
-        beastSelected.getBukkitPlayer().setScoreboard(this.rfbScoreboard.getScoreboard());        
 
+        // non-critical scoreboard code, put it inside a task so if it fails, it won't stop critical code.
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                //set up scoreboard for the beast
+                RFBMatch.this.rfbScoreboard.assignBeast(beastSelected);
+                beastSelected.getBukkitPlayer().setScoreboard(RFBMatch.this.rfbScoreboard.getScoreboard());
+            }
+        });
         return beastSelected;
     }
 
@@ -369,7 +374,7 @@ public class RFBMatch {
      * 
      * @author kvnamo
      */
-    public void verifyGameOver() {
+    public synchronized void verifyGameOver() {
         // Finish the game if there is only one player or the match timer is
         // cero
         this.plugin.getServer().getLogger().severe(String.format("verifyGameOver.timeleft: %s", this.timeLeft));

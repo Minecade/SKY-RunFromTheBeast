@@ -111,7 +111,10 @@ public class RFBScoreBoard {
     public void assignBeast(RFBPlayer beast){
         Team team = this.scoreboard.getTeam(PlayerTagEnum.getTag(beast.getBukkitPlayer(), beast.getMinecadeAccount()).name());
         team.removePlayer(Bukkit.getOfflinePlayer(beast.getBukkitPlayer().getName()));
-        Team beastTeam = this.scoreboard.registerNewTeam(BEAST);
+        Team beastTeam = this.scoreboard.getTeam(BEAST);
+        if (beastTeam == null) {
+            beastTeam = this.scoreboard.registerNewTeam(BEAST);
+        }
         beastTeam.addPlayer(Bukkit.getOfflinePlayer(beast.getBukkitPlayer().getName()));
         beastTeam.setPrefix(String.format("[%s%s%s%s] ", ChatColor.RED, ChatColor.BOLD, BEAST, ChatColor.RESET));
     }
