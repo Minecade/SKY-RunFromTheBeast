@@ -13,6 +13,7 @@ import com.minecade.engine.command.CommandFactory;
 import com.minecade.rfb.data.RFBPersistence;
 import com.minecade.rfb.engine.RFBMatch;
 import com.minecade.rfb.listener.RFBListener;
+import com.minecade.rfb.worlds.DamnedTunnelsWorld;
 import com.minecade.rfb.worlds.HaloRaceWorld;
 import com.minecade.rfb.worlds.RFBLobbyWorld;
 
@@ -89,6 +90,7 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
         getLogger().info("onEnable: Creating Worlds...");
         lobby = new RFBLobbyWorld(this); 
         runFromTheBeastWorlds.add(new HaloRaceWorld(this));
+        runFromTheBeastWorlds.add(new DamnedTunnelsWorld(this));
         getLogger().info("onEnable: Worlds Created...");
         
         // Create or update server status in DB.

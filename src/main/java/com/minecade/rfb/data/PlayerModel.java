@@ -37,6 +37,9 @@ public class PlayerModel {
     @Column(name = "win", nullable = false)
     private int wins;
     
+    @Column(name = "butter_coins", nullable = false)
+    private int butterCoins;
+    
     @Column(name = "losses", nullable = false)
     private int losses;
     
@@ -258,5 +261,19 @@ public class PlayerModel {
      */
     public void setBeastPass(Date beast_Pass) {
         this.beastPass = beast_Pass;
+    }
+
+    /**
+     * @return the butterCoins
+     */
+    public int getButterCoins() {
+        return butterCoins;
+    }
+
+    /**
+     * @param butterCoins the butterCoins to set
+     */
+    public void setButterCoins(int butterCoins) {
+        this.butterCoins = butterCoins;
     }
 }
