@@ -592,7 +592,7 @@ public class RFBMatch {
             case STARTING_MATCH:
                 
                 if(this.beast != null && playerName.equalsIgnoreCase(this.beast.getBukkitPlayer().getName())){
-                    this.broadcastMessageToRunners(String.format("%sBEAST%s quit the game, the match finish!", ChatColor.RED, ChatColor.DARK_GRAY));
+                    this.broadcastMessageToRunners(String.format("%sBEAST%s quit the game, the match finished!", ChatColor.RED, ChatColor.DARK_GRAY));
                     
                     //task to stop the match
                     this.timerTask.cancel();
