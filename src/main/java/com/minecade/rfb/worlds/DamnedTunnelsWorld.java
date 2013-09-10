@@ -20,9 +20,9 @@ public DamnedTunnelsWorld(MinecadePlugin plugin) {
         
         setBeastSpawnLocation(new MapLocation(36, 34, -37));
         
-        addFreeRunnersLocation(new MapLocation(20, 62, -60));
-        addFreeRunnersLocation(new MapLocation(20, 62, -60));
-        addFreeRunnersLocation(new MapLocation(20, 62, -60));
-        addFreeRunnersLocation(new MapLocation(20, 62, -60));
+        addFreeRunnersLocation(new MapLocation(20, 62.5, -60));
+        addFreeRunnersLocation(new MapLocation(20, 62.5, -60));
+        addFreeRunnersLocation(new MapLocation(20, 62.5, -60));
+        addFreeRunnersLocation(new MapLocation(20, 62.5, -60));
     }
 }

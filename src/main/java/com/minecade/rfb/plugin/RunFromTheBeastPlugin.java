@@ -89,7 +89,7 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
         // Initialize Worlds
         getLogger().info("onEnable: Creating Worlds...");
         lobby = new RFBLobbyWorld(this); 
-        //runFromTheBeastWorlds.add(new HaloRaceWorld(this));
+        runFromTheBeastWorlds.add(new HaloRaceWorld(this));
         runFromTheBeastWorlds.add(new DamnedTunnelsWorld(this));
         getLogger().info("onEnable: Worlds Created...");
         
