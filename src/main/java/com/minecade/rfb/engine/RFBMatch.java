@@ -209,7 +209,7 @@ public class RFBMatch {
             }
         }
         this.broadcastMessageToRunners(String.format("%sRunners, get ready!", ChatColor.DARK_GRAY));
-        this.broadcastMessageToRunners(String.format("%sYou will be free in %s[0]", ChatColor.DARK_GRAY, ChatColor.RED));
+        this.broadcastMessageToRunners(String.format("%sYou will be free in %s[%s]", ChatColor.DARK_GRAY, ChatColor.RED, this.readyCountdown));
         
         // Create the task for the count down, freedom for runners
         if (null != this.timerTask) {
@@ -590,6 +590,15 @@ public class RFBMatch {
         if (player!= null) {
             switch (this.status) {
             case STARTING_MATCH:
+                
+                if(this.beast != null && playerName.equalsIgnoreCase(this.beast.getBukkitPlayer().getName())){
+                    this.broadcastMessageToRunners(String.format("%sBEAST%s quit the game, the match finish!", ChatColor.RED, ChatColor.DARK_GRAY));
+                    
+                    //task to stop the match
+                    this.timerTask.cancel();
+                    this.timeLeft = 10;
+                    new TimerTask(this, this.timeLeft, false, false, false, true).runTaskTimer(this.plugin, 11, 20l);
+                }
                 // Check if starting players number is reached
                 int playersRemaining = requiredPlayers - this.players.size();
                 if (playersRemaining > 0) {
@@ -612,6 +621,15 @@ public class RFBMatch {
 
                 this.broadcastMessage(String.format("%s[%s] %squit the game", ChatColor.RED, playerName, ChatColor.DARK_GRAY));
                 this.verifyGameOver();
+                
+                if(playerName.equalsIgnoreCase(this.beast.getBukkitPlayer().getName())){
+                    this.broadcastMessageToRunners(String.format("%sBEAST%s quit the game, the match finish!", ChatColor.RED, ChatColor.DARK_GRAY));
+                    
+                    //task to stop the match
+                    this.timerTask.cancel();
+                    this.timeLeft = 10;
+                    new TimerTask(this, this.timeLeft, false, false, false, true).runTaskTimer(this.plugin, 11, 20l);
+                }
 
                 // Update scoreboard
                 this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
@@ -742,6 +760,12 @@ public class RFBMatch {
                 } else {
                     attackVictim.setLastDamageBy(attackDamager.getBukkitPlayer().getName());
                 }
+                break;
+            case FIRE_TICK:
+                if(this.arena == null || this.status != RFBStatusEnum.IN_PROGRESS){
+                    event.setCancelled(true);
+                }
+                    
                 break;
             default:
                 break;
