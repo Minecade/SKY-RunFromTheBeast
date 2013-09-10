@@ -16,6 +16,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.world.WorldInitEvent;
 
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
@@ -119,6 +120,18 @@ public class RFBListener implements Listener {
     @EventHandler
     public void onItemSpawn(ItemSpawnEvent event) {
         event.setCancelled(true);
+    }
+    
+    /**
+     * Calls when an player respawns.
+     * 
+     * @param event
+     * @author jdgil
+     */
+    @EventHandler
+    public void onPlayerRespawn(PlayerRespawnEvent event) {
+        this.plugin.getMatch().playerRespawn(event);
+        this.plugin.getServer().getLogger().info("onPlayerRespawn");
     }
     
     /**

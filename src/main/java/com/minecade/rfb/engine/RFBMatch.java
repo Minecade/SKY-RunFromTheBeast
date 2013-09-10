@@ -27,6 +27,7 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
@@ -168,21 +169,19 @@ public class RFBMatch {
                         }
                     }
                 });
+                
             }
             break;
         case IN_PROGRESS:
-            // allow staff to spectate games in progress
-            if (plugin.getPersistence().isPlayerStaff(bukkitPlayer)) {
-                EngineUtils.clearBukkitPlayer(bukkitPlayer);
-                this.hidePlayer(bukkitPlayer);
-                this.spectators.put(bukkitPlayer.getName(), player);
-            } else {
-                EngineUtils.disconnect(bukkitPlayer, LOBBY, plugin.getConfig().getString("server.full-message"));
-                return;
-            }
-            break;
+            Bukkit.getScheduler().runTask(plugin, new Runnable() {
+                @Override
+                public void run() {
+                    EngineUtils.disconnect(bukkitPlayer, LOBBY, plugin.getConfig().getString("server.full-message"));
+                }
+            });
+            return;
         }
-
+        
         // Teleport to match location
         bukkitPlayer.teleport(this.arena == null ? this.lobbyLocation : this.arena.getRandomSpawn());
     }
@@ -306,10 +305,8 @@ public class RFBMatch {
         this.broadcastMessageToBeast(String.format("%sYou will be free in %s[%s] %sseconds", ChatColor.DARK_GRAY, ChatColor.RED, this.beastFreedomCountdown,
                 ChatColor.DARK_GRAY));
         
-        //set jumpboost and speed2 to the beast
-        this.beast.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.JUMP, this.time * 20, 1));
-        this.beast.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, this.time * 20, 2));
-        this.plugin.getServer().getLogger().severe(String.format("jumpboost and speed2 to : %s", this.beast.getBukkitPlayer().getName()));
+        //set speed2 to the beast
+        this.beast.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, (this.beastFreedomCountdown + 15) * 20, 2));
         // Free the beast task
         this.plugin.getServer().getScheduler().runTaskLater(this.plugin, new Runnable() {
             @Override
@@ -385,6 +382,7 @@ public class RFBMatch {
                     if (this.timeLeft != 0) {
                         // Save player stats
                         player.getPlayerModel().setWins(player.getPlayerModel().getWins() + 1);
+                        player.getPlayerModel().setButterCoins(player.getPlayerModel().getButterCoins() + 1);
                         player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
                         this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
 
@@ -516,6 +514,7 @@ public class RFBMatch {
                         for (RFBPlayer playerMatch : this.players.values()) {
                             // Save Stats for winners: Runners
                             playerMatch.getPlayerModel().setWins(playerMatch.getPlayerModel().getWins() + 1);
+                            player.getPlayerModel().setButterCoins(player.getPlayerModel().getButterCoins() + 1);
                             playerMatch.getPlayerModel().setTimePlayed(playerMatch.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
                             this.plugin.getPersistence().updatePlayer(playerMatch.getPlayerModel());
 
@@ -752,6 +751,21 @@ public class RFBMatch {
             }
         }
     }
+    
+    public void playerRespawn(PlayerRespawnEvent event){
+        final Player bukkitPlayer = event.getPlayer();
+        EngineUtils.clearBukkitPlayer(bukkitPlayer);
+        if (this.lobbyLocation != null)
+            event.setRespawnLocation(this.lobbyLocation);
+        
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+            }
+        });
+
+    }
 
     /**
      * Gets inventory player ready for match
@@ -782,12 +796,12 @@ public class RFBMatch {
         String timePlayed = decimalFormat.format((double) player.getPlayerModel().getTimePlayed() / (double) 86400);
 
         statsMeta.setPages(String.format(
-                "%s%s%s STATS! \n\n\n%s %sWins: %s%s\n %sKills: %s%s\n %sDeaths: %s%s\n %sLooses: %s%s\n %sKDR: %s%s\n %sTime played: %s%s days.",
+                "%s%s%s STATS! \n\n\n%s %sWins: %s%s\n %sKills: %s%s\n %sDeaths: %s%s\n %sLooses: %s%s\n %sButter Coins: %s%s\n %sKDR: %s%s\n %sTime played: %s%s days.",
                 ChatColor.BOLD, ChatColor.RED, player.getBukkitPlayer().getName().toUpperCase(), ChatColor.DARK_GRAY, ChatColor.BOLD, ChatColor.DARK_GRAY,
                 player.getPlayerModel().getWins(), ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getKills(), ChatColor.BOLD,
                 ChatColor.DARK_GRAY, player.getPlayerModel().getDeaths(), ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getLosses(),
-                ChatColor.BOLD, ChatColor.DARK_GRAY, kdr, ChatColor.BOLD, ChatColor.DARK_GRAY, timePlayed));
-        stats.setItemMeta(statsMeta);
+                ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getButterCoins(), ChatColor.BOLD, ChatColor.DARK_GRAY, kdr, ChatColor.BOLD, ChatColor.DARK_GRAY, timePlayed));
+                stats.setItemMeta(statsMeta);
 
         return stats;
     }
