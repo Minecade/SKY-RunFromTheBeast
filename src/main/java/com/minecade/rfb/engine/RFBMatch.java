@@ -121,10 +121,8 @@ public class RFBMatch {
             EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
             return;
         case STARTING_MATCH:
-            if (!player.getPlayerModel().isVip()) {
-                EngineUtils.disconnect(bukkitPlayer, LOBBY, plugin.getConfig().getString("server.full-message"));
-                return;
-            }
+            EngineUtils.disconnect(bukkitPlayer, LOBBY, plugin.getConfig().getString("server.full-message"));
+            return;
             // else - let it flow to allow VIPs to enter the starting match (no break)
         case WAITING_FOR_PLAYERS:
             EngineUtils.clearBukkitPlayer(bukkitPlayer);
