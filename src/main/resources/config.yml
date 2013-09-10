@@ -12,8 +12,7 @@ server:
     - '&dVisit skydoesminecraft.com/shop to purchase VIP!'
     - '&dJoin the fun at skydoesminecraft.com for up-to-date information on Sky Networks!'
     - '&dVIP users can join to full servers, visit skydoesminecraft.com/shop to purchase VIP!'
-    id: 1
-    max-players: 6 # Match players in the server.        
+    id: 1      
     name: 'Run from The Beast Server 1'
 
 # Match
