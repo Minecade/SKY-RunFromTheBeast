@@ -9,9 +9,10 @@ entities:
 # Server
 server:
     announcements:
-    - '&dVisit skydoesminecraft.com/shop to purchase VIP!'
-    - '&dJoin the fun at skydoesminecraft.com for up-to-date information on Sky Networks!'
-    - '&dVIP users can join to full servers, visit skydoesminecraft.com/shop to purchase VIP!'
+    - '&dVisit http://skydoesminecraft.com/shop to purchase VIP!'
+    - '&dJoin the fun at http://skydoesminecraft.com for up-to-date information on Sky Networks!'
+    - '&dVIP users can join to full servers, visit http://skydoesminecraft.com/shop to purchase VIP!'
+    - '&dWant to be the Beast? Get VIP at http://skydoesminecraft.com/shop'
     id: 1      
     name: 'Run from The Beast Server 1'
 
