@@ -118,12 +118,8 @@ public class RFBMatch {
         switch (this.status) {
 
         case RESTARTING:
-            EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+            this.teleportToLobby(bukkitPlayer, null);
             return;
-        case STARTING_MATCH:
-            EngineUtils.disconnect(bukkitPlayer, LOBBY, plugin.getConfig().getString("server.full-message"));
-            return;
-            // else - let it flow to allow VIPs to enter the starting match (no break)
         case WAITING_FOR_PLAYERS:
             EngineUtils.clearBukkitPlayer(bukkitPlayer);
             this.setupInventoryToMatch(player);
@@ -139,7 +135,7 @@ public class RFBMatch {
 
             if (playersRemaining <= 0) {
                 // Update server status
-                this.status = RFBStatusEnum.STARTING_MATCH;
+                this.status = this.changeRFBStatus(RFBStatusEnum.STARTING_MATCH);
                 plugin.getPersistence().updateServerStatus(this.status);
 
                 // Begin match start timer
@@ -155,7 +151,7 @@ public class RFBMatch {
                 this.plugin.getServer().getScheduler().runTask(this.plugin, new Runnable() {
                     @Override
                     public void run() {
-                        // Set beast.
+                        // Select optional beasts from VIP list.
                         for (RFBPlayer optionalBeast : RFBMatch.this.players.values()) {
                             if (RFBMatch.this.isBeastVipDialyPassEnable(optionalBeast)) {
                                 optionalBeast.getBukkitPlayer().sendMessage(
@@ -170,18 +166,55 @@ public class RFBMatch {
                 
             }
             break;
+        case STARTING_MATCH:
+        case ALL_WAITING:
+        case BEAST_WAITING:
         case IN_PROGRESS:
-            Bukkit.getScheduler().runTask(plugin, new Runnable() {
-                @Override
-                public void run() {
-                    EngineUtils.disconnect(bukkitPlayer, LOBBY, plugin.getConfig().getString("server.full-message"));
-                }
-            });
+            this.teleportToLobby(bukkitPlayer, plugin.getConfig().getString("server.full-message"));
             return;
         }
         
         // Teleport to match location
         bukkitPlayer.teleport(this.arena == null ? this.lobbyLocation : this.arena.getRandomSpawn());
+    }
+    
+    private RFBStatusEnum changeRFBStatus(RFBStatusEnum status){
+        RFBStatusEnum newStatus = status;
+        switch(status){
+        case RESTARTING:
+            if(this.status == RFBStatusEnum.IN_PROGRESS){
+                newStatus = RFBStatusEnum.RESTARTING;
+            }
+            break;
+        case WAITING_FOR_PLAYERS:
+            //initial status, set when create the RFBMatch
+            if(this.status == RFBStatusEnum.STARTING_MATCH){
+                newStatus = RFBStatusEnum.WAITING_FOR_PLAYERS;
+            }
+            break;
+        case STARTING_MATCH:
+            if(this.status == RFBStatusEnum.WAITING_FOR_PLAYERS){
+                newStatus = RFBStatusEnum.STARTING_MATCH;
+            }
+            break;
+        case ALL_WAITING:
+            if(this.status == RFBStatusEnum.STARTING_MATCH){
+                newStatus = RFBStatusEnum.ALL_WAITING;
+            }
+            break;
+        case BEAST_WAITING:
+            if(this.status == RFBStatusEnum.ALL_WAITING){
+                newStatus = RFBStatusEnum.BEAST_WAITING;
+            }
+            break;
+        case IN_PROGRESS:
+            if(this.status == RFBStatusEnum.BEAST_WAITING){
+                newStatus = RFBStatusEnum.IN_PROGRESS;
+            }
+            break;
+        }
+        //TODO
+        return newStatus;
     }
 
     /**
@@ -191,6 +224,7 @@ public class RFBMatch {
      */
     public synchronized void initMatch() {
         this.arena = plugin.getRandomWorld();
+        this.status = this.changeRFBStatus(RFBStatusEnum.ALL_WAITING);
 
         synchronized (this.players) {
 
@@ -280,7 +314,7 @@ public class RFBMatch {
      */
     public synchronized void startMatch() {
         // Update server status
-        this.status = RFBStatusEnum.IN_PROGRESS;
+        this.status = this.changeRFBStatus(RFBStatusEnum.BEAST_WAITING);
         plugin.getPersistence().updateServerStatus(this.status);
 
         this.timeLeft = this.time;
@@ -310,6 +344,7 @@ public class RFBMatch {
             @Override
             public void run() {
                 beast.getBukkitPlayer().teleport(((RFBBaseWorld) RFBMatch.this.arena).getFreeRunnersRandomSpawn());
+                RFBMatch.this.status = RFBMatch.this.changeRFBStatus(RFBStatusEnum.IN_PROGRESS);
             }
         }, this.beastFreedomCountdown * 20);
     }
@@ -344,7 +379,7 @@ public class RFBMatch {
      */
     public void stopGame() {
         // Update server status
-        this.status = RFBStatusEnum.RESTARTING;
+        this.status = this.changeRFBStatus(RFBStatusEnum.RESTARTING);
         plugin.getPersistence().updateServerStatus(this.status);
 
         // Send players and spectators to the lobby
@@ -433,7 +468,8 @@ public class RFBMatch {
         this.rfbScoreboard.setTimeLeft(timeLeft);
 
         for (RFBPlayer player : this.players.values()) {
-            if ((RFBStatusEnum.STARTING_MATCH.equals(this.status) || RFBStatusEnum.IN_PROGRESS.equals(this.status)) && timeLeft < 6) {
+            if ((RFBStatusEnum.STARTING_MATCH.equals(this.status) || RFBStatusEnum.ALL_WAITING.equals(this.status) 
+                    || RFBStatusEnum.BEAST_WAITING.equals(this.status)) && timeLeft < 6) {
                 player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);
             }
         }
@@ -590,6 +626,29 @@ public class RFBMatch {
         if (player!= null) {
             switch (this.status) {
             case STARTING_MATCH:
+                // Check if starting players number is reached
+                int playersRemaining = requiredPlayers - this.players.size();
+                if (playersRemaining > 0) {
+                    // Cancel begin timer task
+                    this.timerTask.cancel();
+
+                    // Update server status
+                    this.status = this.changeRFBStatus(RFBStatusEnum.WAITING_FOR_PLAYERS);
+                    plugin.getPersistence().updateServerStatus(this.status);
+
+                    // Update scoreboard
+                    this.rfbScoreboard.setMatchPlayers(this.requiredPlayers - this.players.size(), false);
+                }
+                break;
+            case ALL_WAITING:
+            case BEAST_WAITING:
+            case IN_PROGRESS:
+                // Save player stats
+                player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+                player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+                this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
+
+                this.broadcastMessage(String.format("%s[%s] %squit the game", ChatColor.RED, playerName, ChatColor.DARK_GRAY));
                 
                 if(this.beast != null && playerName.equalsIgnoreCase(this.beast.getBukkitPlayer().getName())){
                     this.broadcastMessageToRunners(String.format("%sBEAST%s quit the game, the match finished!", ChatColor.RED, ChatColor.DARK_GRAY));
@@ -598,37 +657,8 @@ public class RFBMatch {
                     this.timerTask.cancel();
                     this.timeLeft = 10;
                     new TimerTask(this, this.timeLeft, false, false, false, true).runTaskTimer(this.plugin, 11, 20l);
-                }
-                // Check if starting players number is reached
-                int playersRemaining = requiredPlayers - this.players.size();
-                if (playersRemaining > 0) {
-                    // Cancel begin timer task
-                    this.timerTask.cancel();
-
-                    // Update server status
-                    this.status = RFBStatusEnum.WAITING_FOR_PLAYERS;
-                    plugin.getPersistence().updateServerStatus(this.status);
-
-                    // Update scoreboard
-                    this.rfbScoreboard.setMatchPlayers(this.requiredPlayers - this.players.size(), false);
-                }
-                break;
-            case IN_PROGRESS:
-                // Save player stats
-                player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
-                player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-
-                this.broadcastMessage(String.format("%s[%s] %squit the game", ChatColor.RED, playerName, ChatColor.DARK_GRAY));
-                this.verifyGameOver();
-                
-                if(playerName.equalsIgnoreCase(this.beast.getBukkitPlayer().getName())){
-                    this.broadcastMessageToRunners(String.format("%sBEAST%s quit the game, the match finish!", ChatColor.RED, ChatColor.DARK_GRAY));
-                    
-                    //task to stop the match
-                    this.timerTask.cancel();
-                    this.timeLeft = 10;
-                    new TimerTask(this, this.timeLeft, false, false, false, true).runTaskTimer(this.plugin, 11, 20l);
+                } else {
+                    this.verifyGameOver();
                 }
 
                 // Update scoreboard
@@ -800,6 +830,17 @@ public class RFBMatch {
         player.getBukkitPlayer().getInventory().addItem(RFBInventoryEnum.INSTRUCTIONS.getItemStack());
         player.getBukkitPlayer().getInventory().addItem(this.getPlayerStats(player));
         player.getBukkitPlayer().getInventory().addItem(RFBInventoryEnum.LEAVE_COMPASS.getItemStack());
+    }
+    
+    private void teleportToLobby(Player player, String message){
+        final Player bukkitPlayer = player;
+        final String msg = message;
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                EngineUtils.disconnect(bukkitPlayer, LOBBY, msg);
+            }
+        });
     }
 
     /**
