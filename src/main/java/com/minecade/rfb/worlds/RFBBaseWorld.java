@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.Location;
+import org.bukkit.World;
 
 import com.minecade.engine.MapLocation;
 import com.minecade.engine.MinecadePlugin;
@@ -29,7 +30,7 @@ public class RFBBaseWorld extends MinecadeWorld {
      */
     public RFBBaseWorld(String worldName, String worldLocation, MinecadePlugin plugin) {
         super(worldName, worldLocation, plugin);
-        
+        configureRFBWorld(world);
     }
     
     /**
@@ -39,6 +40,7 @@ public class RFBBaseWorld extends MinecadeWorld {
      */
     public RFBBaseWorld(MinecadePlugin plugin) {
         super(plugin);
+        configureRFBWorld(world);
     }
 
     /**
@@ -83,5 +85,15 @@ public class RFBBaseWorld extends MinecadeWorld {
      */
     public Location getFreeRunnersRandomSpawn() {
         return runnersFreeSpawnLocation.get(plugin.getRandom().nextInt(runnersFreeSpawnLocation.size()));
+    }
+    
+    /**
+     * Configure rfb world.
+     *
+     * @param world the world
+     */
+    private static void configureRFBWorld(World world) {
+        // Allows/Disallows player to naturally regenerate health, regardless of food level
+        world.setGameRuleValue("naturalRegeneration", "true");
     }
 }
