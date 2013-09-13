@@ -7,8 +7,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
@@ -17,6 +19,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.world.WorldInitEvent;
 
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
@@ -69,6 +72,39 @@ public class RFBListener implements Listener {
         event.setQuitMessage(null);  
         this.plugin.getMatch().playerQuit(event);
         this.plugin.getServer().getLogger().info("onPlayerQuit");
+    }
+    
+    /**
+     * Called by PlayerToggleFlightEvent when player try to fly
+     * @param PlayerToggleFlightEvent
+     * @author jdgil
+     */
+    @EventHandler
+    public void onPlayerToggleFlightEvent(PlayerToggleFlightEvent  event){
+        this.plugin.getMatch().playerToggleFlight(event);
+        this.plugin.getServer().getLogger().info("onPlayerToggleFlightEvent");
+    }
+    
+    /**
+     * Called by EntityShootBowEvent when player shoot an arrow.
+     * @param EntityShootBowEvent
+     * @author jdgil
+     */
+    @EventHandler
+    public void onEntityShootBowEvent(EntityShootBowEvent  event){
+        this.plugin.getMatch().entityShootBowEvent(event);
+        this.plugin.getServer().getLogger().info("onEntityShootBowEvent");
+    }
+    
+    /**
+     * Called by InventoryPickupItemEvent when player pick up a item
+     * @param playerQuitEvent
+     * @author jdgil
+     */
+    @EventHandler
+    public void onInventoryOpenEvent(InventoryOpenEvent event){
+        this.plugin.getMatch().inventoryOpenEvent(event);
+        this.plugin.getServer().getLogger().info("onInventoryOpenEvent");
     }
     
     /**

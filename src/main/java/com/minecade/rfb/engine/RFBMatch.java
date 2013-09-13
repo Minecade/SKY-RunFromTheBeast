@@ -22,12 +22,15 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
@@ -167,10 +170,51 @@ public class RFBMatch {
             }
             break;
         case STARTING_MATCH:
+          //add spectators
+            if(player.getPlayerModel().isVip() || plugin.getPersistence().isPlayerStaff(bukkitPlayer)){
+                this.spectators.put(bukkitPlayer.getName(), player);
+                player.getBukkitPlayer().setAllowFlight(true);
+                player.getBukkitPlayer().teleport(this.lobbyLocation);
+                EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+                this.hidePlayer(bukkitPlayer);
+                player.getBukkitPlayer().setCanPickupItems(false);
+                player.getBukkitPlayer().getInventory().addItem(RFBInventoryEnum.LEAVE_COMPASS.getItemStack());
+                this.broadcastMessageToSpectators(String.format("%sYou are a spectating the match now!", ChatColor.GREEN));
+            } else {
+                this.teleportToLobby(bukkitPlayer, plugin.getConfig().getString("server.full-message"));
+            }
+            return;
         case ALL_WAITING:
+          //add spectators
+            this.plugin.getServer().getLogger().severe(String.format("spectator case: %s", player.getPlayerModel().isVip()));
+            if(player.getPlayerModel().isVip() || plugin.getPersistence().isPlayerStaff(bukkitPlayer)){
+                this.spectators.put(bukkitPlayer.getName(), player);
+                player.getBukkitPlayer().setAllowFlight(true);
+                player.getBukkitPlayer().teleport(this.arena.getRandomSpawn());
+                EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+                this.hidePlayer(bukkitPlayer);
+                player.getBukkitPlayer().setCanPickupItems(false);
+                player.getBukkitPlayer().getInventory().addItem(RFBInventoryEnum.LEAVE_COMPASS.getItemStack());
+                this.broadcastMessageToSpectators(String.format("%sYou are now spectating the match!", ChatColor.GREEN));
+            } else {
+                this.teleportToLobby(bukkitPlayer, plugin.getConfig().getString("server.full-message"));
+            }
+            return;
         case BEAST_WAITING:
         case IN_PROGRESS:
-            this.teleportToLobby(bukkitPlayer, plugin.getConfig().getString("server.full-message"));
+            //add spectators
+            if(player.getPlayerModel().isVip() || plugin.getPersistence().isPlayerStaff(bukkitPlayer)){
+                this.spectators.put(bukkitPlayer.getName(), player);
+                player.getBukkitPlayer().setAllowFlight(true);
+                player.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getSpectatorSpawnLocation());
+                EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+                this.hidePlayer(bukkitPlayer);
+                player.getBukkitPlayer().setCanPickupItems(false);
+                player.getBukkitPlayer().getInventory().addItem(RFBInventoryEnum.LEAVE_COMPASS.getItemStack());
+                this.broadcastMessageToSpectators(String.format("%sYou are a spectating the match now!", ChatColor.GREEN));
+            } else {
+                this.teleportToLobby(bukkitPlayer, plugin.getConfig().getString("server.full-message"));
+            }
             return;
         }
         
@@ -213,7 +257,6 @@ public class RFBMatch {
             }
             break;
         }
-        //TODO
         return newStatus;
     }
 
@@ -234,11 +277,19 @@ public class RFBMatch {
                     String.format("%sYou are the %sBEAST%s, pickup the items in the chest!", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
             beast.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getBeastSpawnLocation());
 
+            //teleport players to jail
             for (RFBPlayer player : this.players.values()) {
                 player.getBukkitPlayer().setGameMode(GameMode.SURVIVAL);
                 EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
                 if (!player.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
                     player.getBukkitPlayer().teleport(this.arena.getRandomSpawn());
+                }
+            }
+            //teleport spectators to jail
+            for (RFBPlayer spectator : this.spectators.values()) {
+                spectator.getBukkitPlayer().setGameMode(GameMode.SURVIVAL);
+                if (!spectator.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
+                    spectator.getBukkitPlayer().teleport(this.arena.getRandomSpawn());
                 }
             }
         }
@@ -325,12 +376,19 @@ public class RFBMatch {
         this.timerTask.runTaskTimer(plugin, 1l, 20l);
 
         this.verifyGameOver();
+        // Free the runners now
         this.broadcastMessageToRunners(String.format("%sBegin to run now, Beast will be free in %s%s %sseconds", ChatColor.DARK_GRAY, ChatColor.RED,
                 this.beastFreedomCountdown, ChatColor.DARK_GRAY));
-        // Free the runners now
         for (RFBPlayer player : this.players.values()) {
             if (!player.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
                 player.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getFreeRunnersRandomSpawn());
+            }
+        }
+        this.broadcastMessageToSpectators(String.format("%sYou are specting now, spectate with runners!!", ChatColor.GREEN));
+        // Free the spectators now
+        for (RFBPlayer spectator : this.spectators.values()) {
+            if (!spectator.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
+                spectator.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getSpectatorSpawnLocation());
             }
         }
         this.broadcastMessageToBeast(String.format("%sBe prepared, get your weapon and armor!", ChatColor.DARK_GRAY));
@@ -452,9 +510,9 @@ public class RFBMatch {
             player.getBukkitPlayer().hidePlayer(bukkitPlayer);
         }
 
-        for (RFBPlayer player : this.spectators.values()) {
-            player.getBukkitPlayer().hidePlayer(bukkitPlayer);
-        }
+//        for (RFBPlayer player : this.spectators.values()) {
+//            player.getBukkitPlayer().hidePlayer(bukkitPlayer);
+//        }
     }
 
     /**
@@ -514,6 +572,18 @@ public class RFBMatch {
             }
         }
     }
+    
+    /**
+     * Broadcast message only to spectators
+     * 
+     * @param message
+     * @author jdgil
+     */
+    private void broadcastMessageToSpectators(String message) {
+        for (RFBPlayer player : this.spectators.values()) {
+                player.getBukkitPlayer().sendMessage(message);
+        }
+    }
 
     /**
      * Call when a block breaks.
@@ -537,6 +607,11 @@ public class RFBMatch {
      */
     public synchronized void playerDeath(PlayerDeathEvent event) {
         final Player bukkitPlayer = (Player) event.getEntity();
+        
+        if (this.spectators.containsKey(bukkitPlayer)){
+            this.spectators.remove(bukkitPlayer.getName());
+            return;
+        }
         switch (this.status) {
         case IN_PROGRESS:
             final RFBPlayer player = this.players.remove(bukkitPlayer.getName());
@@ -622,8 +697,15 @@ public class RFBMatch {
     public synchronized void playerQuit(PlayerQuitEvent event) {
         String playerName = event.getPlayer().getName();
 
-        final RFBPlayer player = this.players.remove(playerName);
+        //if player is spectator just remove and return, dont do anything else
+        if (this.spectators.containsKey(playerName)){
+            this.spectators.remove(playerName);
+            return;
+        }
+        
+        final RFBPlayer player = this.players.get(playerName);
         if (player!= null) {
+            this.players.remove(playerName);
             switch (this.status) {
             case STARTING_MATCH:
                 // Check if starting players number is reached
@@ -669,7 +751,31 @@ public class RFBMatch {
             }
         }
     }
-
+    
+    public void playerToggleFlight(PlayerToggleFlightEvent  event){
+        Player bukkitPlayer = event.getPlayer();
+        if(bukkitPlayer != null && this.players.containsKey(bukkitPlayer.getName())){
+            event.setCancelled(true);
+        }
+    }
+    
+    public void entityShootBowEvent(EntityShootBowEvent event){
+        if(event.getEntity() instanceof Player){
+            Player player = (Player)event.getEntity();
+            if(player != null && this.spectators.containsKey(player.getName())){
+                event.setCancelled(true);
+            }
+        }
+    }
+    
+    public void inventoryOpenEvent(InventoryOpenEvent event){
+       if(event.getPlayer() instanceof Player){
+           Player bukkitPlayer =  (Player)event.getPlayer();
+           if(bukkitPlayer != null && this.spectators.containsKey(bukkitPlayer.getName())){
+               event.setCancelled(true);
+           }
+       }
+    }
     /**
      * Show player.
      * 
@@ -728,10 +834,14 @@ public class RFBMatch {
     public void entityDamage(EntityDamageEvent event) {
         Player bukkitPlayer;
         // the entity damaged was a player
-        if (event.getEntity() instanceof Player) {
-            // the cause was a fall to void
+        if (event.getEntity() instanceof Player) {            
             bukkitPlayer = (Player) event.getEntity();
+            //dont damage to spectators
+            if(this.spectators.containsKey(bukkitPlayer.getName())){
+                event.setCancelled(true);
+            }
             switch (event.getCause()) {
+            // the cause was a fall to void
             case VOID:
                 switch (this.status) {
                 case IN_PROGRESS:
@@ -832,6 +942,7 @@ public class RFBMatch {
         player.getBukkitPlayer().getInventory().addItem(RFBInventoryEnum.LEAVE_COMPASS.getItemStack());
     }
     
+
     private void teleportToLobby(Player player, String message){
         final Player bukkitPlayer = player;
         final String msg = message;
@@ -905,9 +1016,12 @@ public class RFBMatch {
     public void rightClick(PlayerInteractEvent event) {
         Player bukkitPlayer = event.getPlayer();
         ItemStack itemInHand = bukkitPlayer.getItemInHand();
-
+        
         if (RFBInventoryEnum.LEAVE_COMPASS.getMaterial().equals(itemInHand.getType())) {
             EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+        }
+        if(bukkitPlayer != null && this.spectators.containsKey(bukkitPlayer.getName())){
+            event.setCancelled(true);
         }
     }
 }

@@ -18,7 +18,8 @@ import com.minecade.engine.MinecadeWorld;
  */
 public class RFBBaseWorld extends MinecadeWorld {
     
-    public Location beastSpawnLocation;
+    private Location beastSpawnLocation;
+    private Location spectatorSpawnLocation;
     private final List<Location> runnersFreeSpawnLocation = new ArrayList<>(); 
 
     /**
@@ -52,6 +53,20 @@ public class RFBBaseWorld extends MinecadeWorld {
      */
     public void setBeastSpawnLocation(MapLocation location) {
         this.beastSpawnLocation = location.toLocation(world);
+    }
+    
+    /**
+     * @return the spectatorSpawnLocation
+     */
+    public Location getSpectatorSpawnLocation() {
+        return spectatorSpawnLocation;
+    }
+
+    /**
+     * @param spectatorSpawnLocation the spectatorSpawnLocation to set
+     */
+    public void setSpectatorSpawnLocation(MapLocation spectatorSpawnLocation) {
+        this.spectatorSpawnLocation = spectatorSpawnLocation.toLocation(world);
     }
 
     /**
