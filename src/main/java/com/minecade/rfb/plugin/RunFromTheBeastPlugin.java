@@ -15,6 +15,7 @@ import com.minecade.rfb.engine.RFBMatch;
 import com.minecade.rfb.listener.RFBListener;
 import com.minecade.rfb.worlds.DamnedTunnelsWorld;
 import com.minecade.rfb.worlds.HaloRaceWorld;
+import com.minecade.rfb.worlds.LevelsWorld;
 import com.minecade.rfb.worlds.RFBLobbyWorld;
 
 public class RunFromTheBeastPlugin extends MinecadePlugin {
@@ -34,6 +35,7 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
     /**
      * Returns a random world.
      * @return
+     * 
      */
     public MinecadeWorld getRandomWorld() {
         return runFromTheBeastWorlds.get(getRandom().nextInt(runFromTheBeastWorlds.size()));
@@ -91,6 +93,7 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
         lobby = new RFBLobbyWorld(this); 
         runFromTheBeastWorlds.add(new HaloRaceWorld(this));
         runFromTheBeastWorlds.add(new DamnedTunnelsWorld(this));
+        runFromTheBeastWorlds.add(new LevelsWorld(this));
         getLogger().info("onEnable: Worlds Created...");
         
         // Create or update server status in DB.
