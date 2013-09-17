@@ -387,8 +387,6 @@ public class RFBMatch {
         this.broadcastMessageToBeast(String.format("%sYou will be free in %s[%s] %sseconds", ChatColor.DARK_GRAY, ChatColor.RED, this.beastFreedomCountdown,
                 ChatColor.DARK_GRAY));
         
-        //set speed2 to the beast
-        this.beast.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, (this.beastFreedomCountdown + 15) * 20, 2));
         // Free the beast task
         this.plugin.getServer().getScheduler().runTaskLater(this.plugin, new Runnable() {
             @Override
@@ -436,8 +434,9 @@ public class RFBMatch {
         final Player[] onlinePlayers = this.plugin.getServer().getOnlinePlayers();
 
         for (Player player : onlinePlayers) {
-            EngineUtils.disconnect(player.getPlayer(), LOBBY,
-                    String.format("Thanks for playing! Winners: %s%s%s", ChatColor.BOLD, ChatColor.YELLOW, this.winners == null ? "None" : this.winners));
+//            EngineUtils.disconnect(player.getPlayer(), LOBBY,
+//                    String.format("Thanks for playing! Winners: %s%s%s", ChatColor.BOLD, ChatColor.YELLOW, this.winners == null ? "None" : this.winners));
+            EngineUtils.disconnect(player.getPlayer(), LOBBY, null);
         }
 
         // Stop the game
@@ -493,7 +492,7 @@ public class RFBMatch {
                     }
                 }
                 
-                this.broadcastMessage(String.format("Thanks for playing! Winners: %s%s%s", ChatColor.BOLD, 
+                this.broadcastMessage(String.format("%sThanks for playing! Winners: %s%s%s",ChatColor.RED, ChatColor.BOLD, 
                         ChatColor.YELLOW, this.winners == null ? "None" : this.winners));
                 // Start finish timer
                 this.timerTask.cancel();
