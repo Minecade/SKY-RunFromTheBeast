@@ -1,4 +1,4 @@
-# plugin config for bukkit
+  # plugin config for bukkit
 name: ${project.name}
 main: ${main.class}
 version: '${project.version}'
@@ -37,3 +37,7 @@ commands:
         description: Use it to remove a CM (Ops only)    
     forcestart:
         description: Skip the validation to wait to complete the minimum players and force to start the game. (Ops only)
+    youtuber:
+        description: Set players as a YOUTUBER
+    unyoutuber:
+        description: Use it to remove a YOUTUBER (Ops only)
