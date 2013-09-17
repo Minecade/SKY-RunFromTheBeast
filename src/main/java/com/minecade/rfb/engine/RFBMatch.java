@@ -16,6 +16,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -34,8 +35,6 @@ import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
 import com.minecade.engine.MinecadeWorld;
 import com.minecade.engine.enums.PlayerTagEnum;
@@ -267,7 +266,9 @@ public class RFBMatch {
             // Set beast.
             beast = this.selectBeast(this.players.values());
             beast.getBukkitPlayer().sendMessage(
-                    String.format("%sYou are the %sBEAST%s, pickup the items in the chest!", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
+                    String.format("%sYou are the %sBEAST%s!", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
+            beast.getBukkitPlayer().setItemInHand(getBeastSpade());
+            beast.getBukkitPlayer().getInventory().setArmorContents(getBeastArmor());
             beast.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getBeastSpawnLocation());
 
             //teleport players to jail
@@ -395,6 +396,45 @@ public class RFBMatch {
                 RFBMatch.this.status = RFBMatch.this.changeRFBStatus(RFBStatusEnum.IN_PROGRESS);
             }
         }, this.beastFreedomCountdown * 20);
+    }
+    
+    /**
+     * Return the beast armor
+     * @return beast armor content.
+     * @author victorv977
+     */
+    private static ItemStack[] getBeastArmor() {      
+
+        final ItemStack[] armor = new ItemStack[4];
+        
+        final ItemStack helmet = new ItemStack(Material.DIAMOND_HELMET, 1);               
+        armor[3] = helmet;
+        
+        final ItemStack chestplate = new ItemStack(Material.DIAMOND_CHESTPLATE, 1);
+        armor[2] = chestplate;
+        
+        final ItemStack leggings = new ItemStack(Material.DIAMOND_LEGGINGS, 1);        
+        armor[1] = leggings;
+        
+        final ItemStack boots = new ItemStack(Material.DIAMOND_BOOTS, 1);        
+        armor[0] = boots;
+        
+        return armor;
+    }
+    
+    /**
+     * Gets the beast spade.
+     * 
+     * @return the beast spade
+     * @author victorv977
+     */
+    private static ItemStack getBeastSpade() {
+        
+        final ItemStack spade = new ItemStack(Material.DIAMOND_SPADE, 1);        
+        // spade.addUnsafeEnchantment(Enchantment.KNOCKBACK, 2); TODO we need this???
+        // spade.addEnchantment(Enchantment.DURABILITY, 3);
+        
+        return spade;
     }
     
     /**

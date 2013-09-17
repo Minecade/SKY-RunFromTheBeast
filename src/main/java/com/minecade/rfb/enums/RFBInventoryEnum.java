@@ -16,7 +16,7 @@ import org.bukkit.inventory.meta.ItemMeta;
  * @author WindowsUser
  *
  */
-public enum RFBInventoryEnum implements RFBInventory{
+public enum RFBInventoryEnum implements RFBInventory {
     
     INSTRUCTIONS(ChatColor.RED + "Instructions book", Material.WRITTEN_BOOK) {
         
@@ -31,7 +31,7 @@ public enum RFBInventoryEnum implements RFBInventory{
             bookMeta.setAuthor("Run From The Beast");
             bookMeta.setTitle("Instructions and Rules");
             bookMeta.setPages(
-                String.format("%s%sWELCOME TO RUN FROM THE BEST! \n\n\n%s" +
+                String.format("%s%sWELCOME TO RUN FROM THE BEAST! \n\n\n%s" +
                     "Run from the beast until get own weapon and armor in th end of the world and come back to kill him! Runners alive when the beast death wins the game", 
                     ChatColor.BOLD, ChatColor.RED, ChatColor.DARK_GRAY),
                 String.format("%s%sRULES! \n\n\n %s1. Run far away as you can.\n" +
