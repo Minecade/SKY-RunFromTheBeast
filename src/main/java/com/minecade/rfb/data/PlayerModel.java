@@ -53,15 +53,6 @@ public class PlayerModel {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "beast_pass", nullable = true)
     private Date beastPass;
-    
-    // Transient fields
-    private boolean admin;
-    
-    private boolean cm;
-    
-    private boolean vip;
-    
-    private boolean gm;
 
     /**
      * @return the id
@@ -134,34 +125,6 @@ public class PlayerModel {
     }
 
     /**
-     * @return the gm
-     */
-    public boolean isGm() {
-        return gm;
-    }
-
-    /**
-     * @param gm the gm to set
-     */
-    public void setGm(boolean gm) {
-        this.gm = gm;
-    }
-
-    /**
-     * @return the vip
-     */
-    public boolean isVip() {
-        return this.vip;
-    }
-
-    /**
-     * @param vip the vip to set
-     */
-    public void setVip(boolean vip) {
-        this.vip = vip;
-    }
-
-    /**
      * @return the win
      */
     public int getWins() {
@@ -217,34 +180,6 @@ public class PlayerModel {
      */
     public void setDeaths(long deaths) {
         this.deaths = deaths;
-    }
-
-    /**
-     * @return the admin
-     */
-    public boolean isAdmin() {
-        return admin;
-    }
-
-    /**
-     * @param admin the admin to set
-     */
-    public void setAdmin(boolean admin) {
-        this.admin = admin;
-    }
-
-    /**
-     * @return the cm
-     */
-    public boolean isCm() {
-        return cm;
-    }
-
-    /**
-     * @param cm the cm to set
-     */
-    public void setCm(boolean cm) {
-        this.cm = cm;
     }
 
     /**
