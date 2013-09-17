@@ -87,7 +87,7 @@ public class RFBMatch {
 
         // World can't be empty
         if (world == null) {
-            this.plugin.getServer().getLogger().severe("RFBMatch initWorld: world parameter is null");
+            this.plugin.getServer().getLogger().info("RFBMatch initWorld: world parameter is null");
             return;
         }
 
@@ -171,16 +171,15 @@ public class RFBMatch {
             break;
         case STARTING_MATCH:
           //add spectators
-            if(player.getPlayerModel().isVip() || plugin.getPersistence().isPlayerStaff(bukkitPlayer)){
+            if(player.getMinecadeAccount().isVip() || plugin.getPersistence().isPlayerStaff(bukkitPlayer)){
                 this.addSpectatorToMatch(player, this.lobbyLocation);
             } else {
                 this.teleportToLobby(bukkitPlayer, plugin.getConfig().getString("server.full-message"));
             }
             return;
         case ALL_WAITING:
-          //add spectators
-            this.plugin.getServer().getLogger().severe(String.format("spectator case: %s", player.getPlayerModel().isVip()));
-            if(player.getPlayerModel().isVip() || plugin.getPersistence().isPlayerStaff(bukkitPlayer)){
+            //add spectators            
+            if(player.getMinecadeAccount().isVip() || plugin.getPersistence().isPlayerStaff(bukkitPlayer)){
                 this.addSpectatorToMatch(player, this.arena.getRandomSpawn());
             } else {
                 this.teleportToLobby(bukkitPlayer, plugin.getConfig().getString("server.full-message"));
@@ -189,7 +188,7 @@ public class RFBMatch {
         case BEAST_WAITING:
         case IN_PROGRESS:
             //add spectators
-            if(player.getPlayerModel().isVip() || plugin.getPersistence().isPlayerStaff(bukkitPlayer)){
+            if(player.getMinecadeAccount().isVip() || plugin.getPersistence().isPlayerStaff(bukkitPlayer)){
                 this.addSpectatorToMatch(player, ((RFBBaseWorld) this.arena).getSpectatorSpawnLocation());
             } else {
                 this.teleportToLobby(bukkitPlayer, plugin.getConfig().getString("server.full-message"));
@@ -306,7 +305,7 @@ public class RFBMatch {
         final RFBPlayer beastSelected;
         Collection<RFBPlayer> vipPlayers = new ArrayList<RFBPlayer>();
         for (RFBPlayer player : players) {
-            if (player.getPlayerModel().isVip() && this.isBeastVipDialyPassEnable(player))
+            if (player.getMinecadeAccount().isVip() && this.isBeastVipDialyPassEnable(player))
                 vipPlayers.add(player);
         }
 
@@ -333,7 +332,7 @@ public class RFBMatch {
     }
 
     private boolean isBeastVipDialyPassEnable(RFBPlayer player) {
-        if (player.getPlayerModel().isVip()) {
+        if (player.getMinecadeAccount().isVip()) {
 
             if (player.getPlayerModel().getBeastPass() == null) {
                 player.getPlayerModel().setBeastPass(new Date(0l));
@@ -458,7 +457,7 @@ public class RFBMatch {
     public synchronized void verifyGameOver() {
         // Finish the game if there is only one player or the match timer is
         // cero
-        this.plugin.getServer().getLogger().severe(String.format("verifyGameOver.timeleft: %s", this.timeLeft));
+        this.plugin.getServer().getLogger().info(String.format("verifyGameOver.timeleft: %s", this.timeLeft));
         if (this.players.size() <= 1 || this.timeLeft <= 0) {
             // Save winners stats in database
             synchronized (this.players) {
