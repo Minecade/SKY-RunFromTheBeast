@@ -3,7 +3,6 @@ package com.minecade.rfb.data;
 import java.util.Date;
 
 import com.avaje.ebean.SqlUpdate;
-import com.minecade.engine.data.MinecadeAccount;
 import com.minecade.engine.data.MinecadePersistence;
 import com.minecade.rfb.enums.RFBStatusEnum;
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
@@ -71,15 +70,6 @@ public class RFBPersistence extends MinecadePersistence {
         }
         
         return playerModel;
-    }
-    
-    /**
-     * Gets the minecade account
-     * @param playerName
-     * @return MinecadeAccount
-     */
-    public MinecadeAccount getMinecadeAccount(String playerName){
-        return super.getMinecadeAccount(playerName);
     }
 
     /**
