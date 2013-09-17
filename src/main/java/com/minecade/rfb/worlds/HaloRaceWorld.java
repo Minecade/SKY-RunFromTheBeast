@@ -26,7 +26,7 @@ public class HaloRaceWorld extends RFBBaseWorld {
         addLocation(new MapLocation(538, 5, -869.4));
         
         setBeastSpawnLocation(new MapLocation(534.56, 5, -875.43));
-        setSpectatorSpawnLocation(new MapLocation(523, 4, -872.8));
+        setSpectatorSpawnLocation(new MapLocation(523.5, 4.5, -872.5));
         
         addFreeRunnersLocation(new MapLocation(538, 5, -874));
         addFreeRunnersLocation(new MapLocation(538, 5, -876));
