@@ -267,10 +267,8 @@ public class RFBMatch {
             beast = this.selectBeast(this.players.values());
             beast.getBukkitPlayer().sendMessage(
                     String.format("%sYou are the %sBEAST%s!", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
-            beast.getBukkitPlayer().setItemInHand(getBeastSpade());
-            beast.getBukkitPlayer().getInventory().setArmorContents(getBeastArmor());
             beast.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getBeastSpawnLocation());
-
+            
             //teleport players to jail
             for (RFBPlayer player : this.players.values()) {
                 player.getBukkitPlayer().setGameMode(GameMode.SURVIVAL);
@@ -287,6 +285,10 @@ public class RFBMatch {
                 }
             }
         }
+        
+        beast.getBukkitPlayer().getInventory().setArmorContents(getBeastArmor());
+        beast.getBukkitPlayer().setItemInHand(getBeastSpade());
+        
         this.broadcastMessageToRunners(String.format("%sRunners, get ready!", ChatColor.DARK_GRAY));
         this.broadcastMessageToRunners(String.format("%sYou will be free in %s[%s]", ChatColor.DARK_GRAY, ChatColor.RED, this.readyCountdown));
         
@@ -430,7 +432,7 @@ public class RFBMatch {
      */
     private static ItemStack getBeastSpade() {
         
-        final ItemStack spade = new ItemStack(Material.DIAMOND_SPADE, 1);        
+        final ItemStack spade = new ItemStack(Material.DIAMOND_SWORD, 1);        
         // spade.addUnsafeEnchantment(Enchantment.KNOCKBACK, 2); TODO we need this???
         // spade.addEnchantment(Enchantment.DURABILITY, 3);
         
