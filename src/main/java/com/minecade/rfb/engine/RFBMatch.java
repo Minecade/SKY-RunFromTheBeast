@@ -263,8 +263,10 @@ public class RFBMatch {
 
         synchronized (this.players) {
 
-            // Set beast.
-            beast = this.selectBeast(this.players.values());
+            // Set beast, if this.beast != null was because some staff people forced to be the beast.
+            if(this.beast == null)
+                beast = this.selectBeast(this.players.values());
+
             beast.getBukkitPlayer().sendMessage(
                     String.format("%sYou are the %sBEAST%s!", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
             beast.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getBeastSpawnLocation());
@@ -302,6 +304,34 @@ public class RFBMatch {
         // Update scoreboard
         this.rfbScoreboard.init();
         this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
+    }
+    
+    /**
+     *  Force be the beast
+     * @return error
+     * @author jdgil 
+     */
+    public String forceBeBeast(Player staffPlayer){
+        // Check match status
+        if(this.status.equals(RFBStatusEnum.WAITING_FOR_PLAYERS)){
+
+            if (!plugin.getPersistence().isPlayerStaff(staffPlayer))
+                return "You must be Sky's staff to use this command";
+
+            final RFBPlayer beastSelected = new RFBPlayer(plugin, staffPlayer);
+            this.beast = beastSelected;
+            // non-critical scoreboard code, put it inside a task so if it fails, it won't stop critical code.
+            Bukkit.getScheduler().runTask(plugin, new Runnable() {
+                @Override
+                public void run() {
+                    //set up scoreboard for the beast
+                    RFBMatch.this.rfbScoreboard.assignBeast(beastSelected);
+                    beastSelected.getBukkitPlayer().setScoreboard(RFBMatch.this.rfbScoreboard.getScoreboard());
+                }
+            });
+            return null;
+        }
+        return "Server must be in Waiting For Players status to execute this command.";
     }
 
     private RFBPlayer selectBeast(Collection<RFBPlayer> players){
@@ -777,7 +807,15 @@ public class RFBMatch {
         if (player!= null) {
             this.players.remove(playerName);
             switch (this.status) {
+            case WAITING_FOR_PLAYERS:
+                //if beast was forced before by some staff person
+                if(this.beast != null && playerName.equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))
+                    this.beast = null;
+                break;
             case STARTING_MATCH:
+                //if beast was forced before by some staff person
+                if(this.beast != null && playerName.equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))
+                    this.beast = null;
                 // Check if starting players number is reached
                 int playersRemaining = requiredPlayers - this.players.size();
                 if (playersRemaining > 0) {

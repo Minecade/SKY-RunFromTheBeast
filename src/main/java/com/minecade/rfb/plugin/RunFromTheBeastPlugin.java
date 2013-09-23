@@ -12,6 +12,7 @@ import com.minecade.engine.MinecadeWorld;
 import com.minecade.engine.command.CommandFactory;
 import com.minecade.rfb.data.RFBPersistence;
 import com.minecade.rfb.engine.RFBMatch;
+import com.minecade.rfb.engine.RFBPlayer;
 import com.minecade.rfb.listener.RFBListener;
 import com.minecade.rfb.worlds.DamnedTunnelsWorld;
 import com.minecade.rfb.worlds.HaloRaceWorld;
@@ -152,5 +153,13 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
     @Override
     public String forceStart() {
         return this.match.forceStartMatch();
+    }
+    
+    /**
+     * be the beast, only for staff people
+     * @author jdgil
+     */
+    public String beBeast(Player player) {
+        return this.match.forceBeBeast(player);
     }
 }

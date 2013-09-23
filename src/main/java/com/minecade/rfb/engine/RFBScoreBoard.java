@@ -1,7 +1,10 @@
 package com.minecade.rfb.engine;
 
+import java.util.Iterator;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
@@ -114,6 +117,10 @@ public class RFBScoreBoard {
         Team beastTeam = this.scoreboard.getTeam(BEAST);
         if (beastTeam == null) {
             beastTeam = this.scoreboard.registerNewTeam(BEAST);
+        }
+        Iterator<OfflinePlayer> beastPlayers = beastTeam.getPlayers().iterator();
+        while(beastPlayers.hasNext()){
+            beastTeam.removePlayer(beastPlayers.next());
         }
         beastTeam.addPlayer(Bukkit.getOfflinePlayer(beast.getBukkitPlayer().getName()));
         beastTeam.setPrefix(String.format("[%s%s%s%s] ", ChatColor.RED, ChatColor.BOLD, BEAST, ChatColor.RESET));
