@@ -41,3 +41,5 @@ commands:
         description: Set players as a YOUTUBER
     unyoutuber:
         description: Use it to remove a YOUTUBER (Ops only)
+    beast:
+        description: Set player as a BEAST
