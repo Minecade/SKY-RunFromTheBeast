@@ -22,22 +22,9 @@ commands:
     ban:
         description: Ban players
     unban:
-        description: Unban players
-    vip:
-        description: Set players as a VIP
-    unvip:
-        description: Set players as a VIP
-    gm:
-        description: Use it to add a GM (Ops only)
-    ungm:
-        description: Use it to remove a GM (Ops only)
-    cm:
-        description: Use it to add a CM (Ops only)
-    uncm:
-        description: Use it to remove a CM (Ops only)    
+        description: Unban players 
     forcestart:
         description: Skip the validation to wait to complete the minimum players and force to start the game. (Ops only)
-    youtuber:
-        description: Set players as a YOUTUBER
-    unyoutuber:
-        description: Use it to remove a YOUTUBER (Ops only)
+    rank:
+        description: "Modify ranks"
+        usage: "/rank [player] [rank] [true | false]"
