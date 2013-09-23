@@ -25,6 +25,8 @@ commands:
         description: Unban players 
     forcestart:
         description: Skip the validation to wait to complete the minimum players and force to start the game. (Ops only)
+    beast:
+        description: Set player as a BEAST
     rank:
         description: "Modify ranks"
         usage: "/rank [player] [rank] [true | false]"
