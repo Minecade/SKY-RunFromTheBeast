@@ -38,6 +38,8 @@ import org.bukkit.inventory.meta.BookMeta;
 
 import com.minecade.engine.MinecadeWorld;
 import com.minecade.engine.enums.PlayerTagEnum;
+import com.minecade.engine.settings.SettingsEnum;
+import com.minecade.engine.settings.SettingsManager;
 import com.minecade.engine.task.FireworksTask;
 import com.minecade.engine.utils.EngineUtils;
 import com.minecade.rfb.enums.RFBInventoryEnum;
@@ -537,12 +539,7 @@ public class RFBMatch {
                         
                         // Update Butter Coins in central DB
                         final String playerName = player.getBukkitPlayer().getName();
-                        Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-                            @Override
-                            public void run() {
-                                RFBMatch.this.plugin.getPersistence().addButterCoins(playerName, 5);
-                            }
-                        });
+                        this.addButterCoins(player.getBukkitPlayer(), 1);
                         
                         // Save player stats
                         player.getPlayerModel().setWins(player.getPlayerModel().getWins() + 1);
@@ -716,17 +713,7 @@ public class RFBMatch {
                         }
                         
                         // Update Butter Coins in central DB - 5 butter coins for every winner and 1 butter coin else for beast's killer
-                        Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-                        @Override
-                        public void run() {
-                                for(RFBPlayer runner : playerWinners){
-                                    RFBMatch.this.plugin.getPersistence().addButterCoins(runner.getBukkitPlayer().getName(), 5);
-                                }
-                                //butter coins for the beast's killer
-                                if(killer != null)
-                                    RFBMatch.this.plugin.getPersistence().addButterCoins(killer.getBukkitPlayer().getName(), 2);
-                            }
-                        });
+                        this.addButterCoins(killer.getBukkitPlayer(), 5);
 
                         // Save stats in database for the loser: Beast.
                         beast.getPlayerModel().setLosses(beast.getPlayerModel().getLosses() + 1);
@@ -757,13 +744,10 @@ public class RFBMatch {
                         player.setLastDamageBy(null);
                         killer.getPlayerModel().setKills(killer.getPlayerModel().getKills() + 1);
                         this.plugin.getPersistence().updatePlayer(beast.getPlayerModel());
+                        
                         // Update Butter Coins in central DB
-                        Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
-                            @Override
-                            public void run() {
-                                RFBMatch.this.plugin.getPersistence().addButterCoins(killer.getBukkitPlayer().getName(), 1);
-                            }
-                        });
+                        this.addButterCoins(killer.getBukkitPlayer(), 1);
+
                         // Announce kill
                         this.broadcastMessage(String.format("%s%s %skilled by %s%s", ChatColor.RED, bukkitPlayer.getName(), ChatColor.DARK_GRAY, ChatColor.RED,
                                 killer.getBukkitPlayer().getName()));
@@ -884,53 +868,6 @@ public class RFBMatch {
            }
        }
     }
-    /**
-     * Show player.
-     * 
-     * @param bukkitPlayer
-     *            the bukkit player
-     */
-//    private void showPlayer(Player bukkitPlayer) {
-//        for (RFBPlayer player : this.players.values()) {
-//            player.getBukkitPlayer().showPlayer(bukkitPlayer);
-//        }
-//
-//        for (RFBPlayer player : this.spectators.values()) {
-//            player.getBukkitPlayer().showPlayer(bukkitPlayer);
-//        }
-//    }
-
-    /**
-     * Required starting players
-     * 
-     * @author kvnamo
-     */
-//    private boolean startingPlayers() {
-//
-//        if (this.players.size() < this.requiredPlayers) {
-//            synchronized (this.players) {
-//                for (RFBPlayer player : this.spectators.values()) {
-//                    // Add spectator to players list
-//                    this.players.put(player.getBukkitPlayer().getName(), player);
-//                    this.spectators.remove(player.getBukkitPlayer().getName());
-//
-//                    // Show player
-//                    this.showPlayer(player.getBukkitPlayer());
-//
-//                    // Send player to spawn location
-//                    player.getBukkitPlayer().setFlying(false);
-//                    player.getBukkitPlayer().teleport(this.arena == null ? lobbyLocation : this.arena.getRandomSpawn());
-//                    player.getBukkitPlayer().sendMessage(String.format("%sThe game has started!", ChatColor.YELLOW));
-//
-//                    // Check if more spectators are needed
-//                    if (this.players.size() >= this.requiredPlayers)
-//                        return true;
-//                }
-//            }
-//        }
-//
-//        return false;
-//    }
 
     /**
      * Call when a entity damager
@@ -1149,5 +1086,29 @@ public class RFBMatch {
         if(bukkitPlayer != null && this.spectators.containsKey(bukkitPlayer.getName())){
             event.setCancelled(true);
         }
+    }
+    
+    /**
+     * Add butter coins in sky central db
+     * @param player
+     * @param butterCoins
+     * @author Kvnamo
+     */
+    private void addButterCoins(final Player bukkitPlayer, final int butterCoins){
+        
+        // Update Butter Coins in central DB
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+            @Override
+            public void run() {
+                int vipButterCoins = RFBMatch.this.plugin.getPersistence().isPlayerStaff(bukkitPlayer) ?
+                    SettingsManager.getInstance().getInt(SettingsEnum.VIP_BUTTERCOIN_MULTIPLIER) * butterCoins :
+                    SettingsManager.getInstance().getInt(SettingsEnum.BUTTERCOIN_MULTIPLIER) * butterCoins ;
+                
+                RFBMatch.this.plugin.getPersistence().addButterCoins(bukkitPlayer.getName(), vipButterCoins);
+            }
+        });
+        
+        bukkitPlayer.sendMessage(String.format("%s[ButterCoins] %sYou have earned %s ButterCoins!", 
+            ChatColor.GOLD, ChatColor.YELLOW, butterCoins));
     }
 }
