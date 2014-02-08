@@ -1,33 +1,18 @@
 package com.minecade.rfb.data;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import com.minecade.rfb.engine.RFBGame;
 
-import com.minecade.rfb.enums.RFBStatusEnum;
-
-// This class is an entity that should be persisted
-@Entity
-// Name of the table in the database/file
-@Table(name = "servers")
 public class ServerModel {
 
-    @Id
-    @Column(name = "id", unique = true)
     private long serverId;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "state", nullable = false)
-    private RFBStatusEnum state = RFBStatusEnum.WAITING_FOR_PLAYERS;
+    private RFBGame.Status state = RFBGame.Status.WAITING_FOR_PLAYERS;
     
-    @Column(name = "max_players", nullable = false)
     private int maxPlayers;
     
-    @Column(name = "online_players", nullable = false)
     private int onlinePlayers;
+    
+    private String worldName;
 
     /**
      * @return the serverId
@@ -41,20 +26,6 @@ public class ServerModel {
      */
     public void setServerId(long serverId) {
         this.serverId = serverId;
-    }
-
-    /**
-     * @return the state
-     */
-    public RFBStatusEnum getState() {
-        return state;
-    }
-
-    /**
-     * @param state the state to set
-     */
-    public void setState(RFBStatusEnum state) {
-        this.state = state;
     }
 
     /**
@@ -83,5 +54,33 @@ public class ServerModel {
      */
     public void setOnlinePlayers(int onlinePlayers) {
         this.onlinePlayers = onlinePlayers;
+    }
+
+    /**
+     * @return the worldName
+     */
+    public String getWorldName() {
+        return worldName;
+    }
+
+    /**
+     * @param worldName the worldName to set
+     */
+    public void setWorldName(String worldName) {
+        this.worldName = worldName;
+    }
+
+    /**
+     * @return the state
+     */
+    public RFBGame.Status getState() {
+        return state;
+    }
+
+    /**
+     * @param state the state to set
+     */
+    public void setState(RFBGame.Status state) {
+        this.state = state;
     }
 }

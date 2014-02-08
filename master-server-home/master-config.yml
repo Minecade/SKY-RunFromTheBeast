@@ -13,8 +13,12 @@ server:
     - '&dJoin the fun at http://skydoesminecraft.com for up-to-date information on Sky Networks!'
     - '&dVIP users can join to full servers, visit http://skydoesminecraft.com/shop to purchase VIP!'
     - '&dWant to be the Beast? Get VIP at http://skydoesminecraft.com/shop'
+    - '&dVIP players can ride other players and avoid hits from the beast, Get VIP at http://skydoesminecraft.com/shop'
     id: <index>     
     name: 'Run from The Beast Server <index>'
+    max-players: 30
+    max-vip-players: 45
+    
 
 # Match
 match:
@@ -25,17 +29,17 @@ match:
     ready-countdown: 15 # The time to wait until all runners are ready to start to run.
     beast-countdown: 15 # The time to wait until get free the beast.
     required-players: 6 # Minimun Players needed to start the match.
-    server-full-message: 'The server if full, visit skydoesminecraft.com/shop to purchase VIP!'
+    server-full-message: 'The server is full, visit skydoesminecraft.com/shop to purchase VIP!'
 
 # Lobby
 lobby:
+    world-name: RFBLobbyWorld
     spawn:
-        x: -5
+        x: -7
         y: 49
-        z: 2
+        z: 4
         pitch: 0
-        yaw: 90
-        world: RFBLobbyWorld
+        yaw: 90 
 
 # Central Database
 minecade:

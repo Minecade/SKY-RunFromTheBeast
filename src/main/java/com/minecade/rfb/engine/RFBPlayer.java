@@ -17,6 +17,10 @@ public class RFBPlayer {
     private PlayerModel playerModel;
     
     private String lastMessage;
+    
+    private int unridePassengerCount;
+    
+    private MinecadeAccount minecadeAccount;
 
     public String getLastDamageBy() {
         return lastDamageBy;
@@ -29,9 +33,17 @@ public class RFBPlayer {
     public boolean isInAir() {
         return inAir;
     }
+    
+    public boolean isVip() {
+        return null != minecadeAccount ? minecadeAccount.isVip() : false;
+    }
 
     public void setInAir(boolean inAir) {
         this.inAir = inAir;
+    }
+    
+    public void sendMessage(String message) {
+        bukkitPlayer.sendMessage(message);
     }
 
     public Player getBukkitPlayer() {
@@ -49,22 +61,11 @@ public class RFBPlayer {
     public void setPlayerModel(PlayerModel playerModel) {
         this.playerModel = playerModel;
     }
-    
-    private MinecadeAccount minecadeAccount;
 
-    /**
-     * Gets the minecadeAccount
-     * @return minecadeAccount
-     * @author kunamo
-     */
     public MinecadeAccount getMinecadeAccount() {
         return this.minecadeAccount;
     }
 
-    /**
-     * Sets the minecadeAccount
-     * @author kunamo
-     */
     public void setMinecadeAccount(MinecadeAccount minecadeAccount) {
         this.minecadeAccount = minecadeAccount;
     }
@@ -77,14 +78,22 @@ public class RFBPlayer {
         this.lastMessage = lastMessage;
     }
 
-    /**
-     * @param bukkitPlayer
-     * @author jdgil
-     */
     public RFBPlayer(RunFromTheBeastPlugin plugin, Player bukkitPlayer) {
         this.bukkitPlayer = bukkitPlayer;
-        this.playerModel = plugin.getPersistence().getPlayer(bukkitPlayer.getName());
+        this.playerModel = plugin.getPersistence().getPlayerModel(bukkitPlayer.getName());
         this.minecadeAccount = plugin.getPersistence().getMinecadeAccount(bukkitPlayer.getName());
+    }
+
+    public int getUnridePassengerCount() {
+        return unridePassengerCount;
+    }
+
+    public void setUnridePassengerCount(int unridePassenger) {
+        this.unridePassengerCount = unridePassenger;
+    }
+    
+    public void addUnridePassengerCount() {
+        this.unridePassengerCount = this.unridePassengerCount + 1;
     }
 
 }

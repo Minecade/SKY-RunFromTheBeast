@@ -11,47 +11,28 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
-// this class is an entity that should be persisted
-@Entity
-// name of the table in the database/file
-@Table(name = "players")
 public class PlayerModel {
 
-    @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
-    @Column(name = "id", unique = true, insertable = false)
     private long id;
     
-    @Column(name = "username", length = 16, unique = true, nullable = false)
     private String username;
     
-    @Column(name = "kills", nullable = false)
     private long kills;
     
-    @Column(name = "deaths", nullable = false)
     private long deaths;
     
-    @Column(name = "suicides", nullable = false)
     private long suicides;
     
-    @Column(name = "win", nullable = false)
     private int wins;
     
-    @Column(name = "butter_coins", nullable = false)
     private int butterCoins;
     
-    @Column(name = "losses", nullable = false)
     private int losses;
     
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "last_seen", nullable = false)
     private Date lastSeen;
        
-    @Column(name = "time_played", nullable = false)
     private int timePlayed;
     
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "beast_pass", nullable = true)
     private Date beastPass;
 
     /**

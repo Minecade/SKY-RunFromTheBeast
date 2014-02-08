@@ -1,207 +1,580 @@
 package com.minecade.rfb.engine;
 
-import java.text.DateFormat;
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
-import java.util.Date;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.time.DateUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
-import org.bukkit.World;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
-import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.metadata.MetadataValue;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 
-import com.minecade.engine.MinecadeWorld;
 import com.minecade.engine.enums.PlayerTagEnum;
 import com.minecade.engine.settings.SettingsEnum;
 import com.minecade.engine.settings.SettingsManager;
 import com.minecade.engine.task.FireworksTask;
+import com.minecade.engine.utils.DragonBarUtils;
 import com.minecade.engine.utils.EngineUtils;
 import com.minecade.rfb.enums.RFBInventoryEnum;
-import com.minecade.rfb.enums.RFBStatusEnum;
 import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
-import com.minecade.rfb.task.TimerTask;
-import com.minecade.rfb.worlds.RFBBaseWorld;
 
 public class RFBMatch {
 
-    private final int time;
-    private final int startCountdown;
-    private final int readyCountdown;
-    private final int requiredPlayers;
-    private final int beastFreedomCountdown;
-
     private RunFromTheBeastPlugin plugin;
-    private Location lobbyLocation;
-    private volatile RFBStatusEnum status = RFBStatusEnum.WAITING_FOR_PLAYERS;
-    private static final String LOBBY = "lobby";
-    private Map<String, RFBPlayer> players;
-    private int timeLeft;
-    private TimerTask timerTask;
-    private String winners;
-    private MinecadeWorld arena;
-    private RFBScoreBoard rfbScoreboard;
+    private RFBWorld world;
+    private final int requiredPlayerCount;
     private Map<String, RFBPlayer> spectators;
+    private Map<String, RFBPlayer> players;
     private RFBPlayer beast;
+    private final int matchCountdown;
+    private final int beastWaitingTime;
+    private final int readyCountdown;
+    private int countdown;
+    private final MatchScoreboard rfbScoreboard;
+    private final MatchTimerTask timerTask;
+    private List<String> broadcastMessages;
+    private final String LOBBY = "lobby1";
+    
+    private Status status = Status.WAITING_FOR_PLAYERS;
 
-    public RFBMatch(RunFromTheBeastPlugin plugin) {
+    public RFBMatch(RunFromTheBeastPlugin plugin, RFBWorld rfbWorld){
         this.plugin = plugin;
-        this.rfbScoreboard = new RFBScoreBoard(this.plugin);
-
-        this.time = plugin.getConfig().getInt("match.time");
-        this.startCountdown = plugin.getConfig().getInt("match.start-countdown");
+        this.world = rfbWorld;
+        this.requiredPlayerCount = plugin.getConfig().getInt("match.required-players");
+        this.matchCountdown = plugin.getConfig().getInt("match.time");
+        this.beastWaitingTime = plugin.getConfig().getInt("match.beast-countdown");
         this.readyCountdown = plugin.getConfig().getInt("match.ready-countdown");
-        this.requiredPlayers = plugin.getConfig().getInt("match.required-players");
-        this.beastFreedomCountdown = plugin.getConfig().getInt("match.beast-countdown");
-
-        this.players = new ConcurrentHashMap<String, RFBPlayer>(this.requiredPlayers);
+        this.players = new ConcurrentHashMap<String, RFBPlayer>();
         this.spectators = new ConcurrentHashMap<String, RFBPlayer>();
-    }
-
-    public void initWorld(WorldInitEvent event) {
-        World world = event.getWorld();
-
-        // World can't be empty
-        if (world == null) {
-            this.plugin.getServer().getLogger().info("RFBMatch initWorld: world parameter is null");
-            return;
-        }
-
-        // if the map is the lobby
-        if (plugin.getConfig().getString("match.lobby-world-name").equalsIgnoreCase(world.getName())) {
-            this.lobbyLocation = EngineUtils.locationFromConfig(this.plugin.getConfig(), world, "lobby.spawn");
-            world.setSpawnLocation(this.lobbyLocation.getBlockX(), this.lobbyLocation.getBlockY(), this.lobbyLocation.getBlockZ());
-        }
-        
-        this.rfbScoreboard.init();
-    }
-
-    /**
-     * Call when player join the match
-     * 
-     * @param PlayerJoinEvent
-     * @author jdgil
-     */
-    public synchronized void playerJoin(PlayerJoinEvent event) {
-        final Player bukkitPlayer = event.getPlayer();
-        bukkitPlayer.setAllowFlight(false);
-
-        // Player banned
-        if (this.plugin.getPersistence().isPlayerBanned(bukkitPlayer.getName())) {
-            bukkitPlayer.kickPlayer(plugin.getConfig().getString("match.ban-message"));
-            return;
-        }
-
-        final RFBPlayer player = new RFBPlayer(this.plugin, bukkitPlayer);
-
-        switch (this.status) {
-
-        case RESTARTING:
-            this.teleportToLobby(bukkitPlayer, null);
-            return;
-        case WAITING_FOR_PLAYERS:
-            EngineUtils.clearBukkitPlayer(bukkitPlayer);
-            this.setupInventoryToMatch(player);
-
-            // Setup scoreboard
-            this.rfbScoreboard.assignTeam(player);
-            bukkitPlayer.setScoreboard(this.rfbScoreboard.getScoreboard());
-            // add player
-            this.players.put(bukkitPlayer.getName(), player);
-            this.rfbScoreboard.setMatchPlayers(this.requiredPlayers - this.players.size(), false);
-
-            int playersRemaining = requiredPlayers - this.players.size();
-
-            if (playersRemaining <= 0) {
-                // Update server status
-                this.status = this.changeRFBStatus(RFBStatusEnum.STARTING_MATCH);
-                plugin.getPersistence().updateServerStatus(this.status);
-
-                // Begin match start timer
-                this.timeLeft = this.timeLeft == 0 ? this.startCountdown : timeLeft;
-                if (null != this.timerTask) {
-                    this.timerTask.cancel();
-                }
-                this.timerTask = new TimerTask(this, this.timeLeft, true, false, false, false);
-                this.timerTask.runTaskTimer(this.plugin, 1l, 20l);
-                this.broadcastMessage(String.format("%s[%s] %splayers reached, the match will begin soon", ChatColor.RED, this.players.size(),
-                        ChatColor.DARK_GRAY));
-
-                this.plugin.getServer().getScheduler().runTask(this.plugin, new Runnable() {
-                    @Override
-                    public void run() {
-                        // Select optional beasts from VIP list.
-                        for (RFBPlayer optionalBeast : RFBMatch.this.players.values()) {
-                            if (RFBMatch.this.isBeastVipDialyPassEnable(optionalBeast)) {
-                                optionalBeast.getBukkitPlayer().sendMessage(
-                                        String.format("%sYou have enabled your Daily Beast %sVIP %sPass", ChatColor.DARK_GRAY, ChatColor.RED,
-                                                ChatColor.DARK_GRAY));
-                                optionalBeast.getBukkitPlayer().sendMessage(
-                                        String.format("%sYou have a higher chance of becoming the beast!", ChatColor.DARK_GRAY));
-                            }
-                        }
-                    }
-                });
-                
-            }
-            break;
-        case STARTING_MATCH:
-          //add spectators
-            if(player.getMinecadeAccount().isVip() || plugin.getPersistence().isPlayerStaff(bukkitPlayer)){
-                this.addSpectatorToMatch(player, this.lobbyLocation);
-            } else {
-                this.teleportToLobby(bukkitPlayer, plugin.getConfig().getString("server.full-message"));
-            }
-            return;
-        case ALL_WAITING:
-            //add spectators            
-            if(player.getMinecadeAccount().isVip() || plugin.getPersistence().isPlayerStaff(bukkitPlayer)){
-                this.addSpectatorToMatch(player, this.arena.getRandomSpawn());
-            } else {
-                this.teleportToLobby(bukkitPlayer, plugin.getConfig().getString("server.full-message"));
-            }
-            return;
-        case BEAST_WAITING:
-        case IN_PROGRESS:
-            //add spectators
-            if(player.getMinecadeAccount().isVip() || plugin.getPersistence().isPlayerStaff(bukkitPlayer)){
-                this.addSpectatorToMatch(player, ((RFBBaseWorld) this.arena).getSpectatorSpawnLocation());
-            } else {
-                this.teleportToLobby(bukkitPlayer, plugin.getConfig().getString("server.full-message"));
-            }
-            return;
-        }
-        
-        // Teleport to match location
-        bukkitPlayer.teleport(this.arena == null ? this.lobbyLocation : this.arena.getRandomSpawn());
+        // broadcast messages list
+        this.broadcastMessages = Collections.synchronizedList(new ArrayList<String>());
+        // init scoreboard
+        this.rfbScoreboard = new MatchScoreboard();
+        // init timer - a single timer which never stops controls all the
+        // match's logic
+        this.timerTask = new MatchTimerTask();
+        this.timerTask.runTaskTimer(plugin, 20, 20);
     }
     
-    private void addSpectatorToMatch(RFBPlayer player, Location respawnLocation){
+    public void onPlayerRespawn(PlayerRespawnEvent event){
+        final Player bukkitPlayer = event.getPlayer();
+        EngineUtils.clearBukkitPlayer(bukkitPlayer);
+        switch(this.status){
+        case ALL_WAITING:
+        case BEAST_WAITING:
+        case IN_PROGRESS:
+            event.setRespawnLocation(this.world.getSpectatorSpawnLocation());
+            RFBPlayer player = new RFBPlayer(this.plugin, bukkitPlayer);
+            //add player death as a espectator
+            this.addSpectatorToMatch(player, null);
+            break;
+        case STOPPED:
+        case WAITING_FOR_PLAYERS:
+            event.setRespawnLocation(plugin.getGame().getLobbySpawnLocation());
+            break;
+        default:
+            break;
+        }
+        
+    }
+    
+    public void onPlayerInteract(PlayerInteractEvent event) {
+        Player bukkitPlayer = event.getPlayer();
+        ItemStack itemInHand = bukkitPlayer.getItemInHand();
+        if (RFBInventoryEnum.LEAVE_COMPASS.getMaterial().equals(itemInHand.getType())) {
+            EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+        }
+        
+        if(event.getAction().equals(Action.LEFT_CLICK_BLOCK) || event.getAction().equals(Action.LEFT_CLICK_AIR)){
+            if(this.players.containsKey(bukkitPlayer.getName())){
+                final RFBPlayer player = this.players.get(bukkitPlayer.getName());
+                if(player.getBukkitPlayer().getPassenger() != null){
+                    if(player.getBukkitPlayer().getPassenger() instanceof Player){
+                        Player passenger = (Player)player.getBukkitPlayer().getPassenger();
+                        player.addUnridePassengerCount();
+                        int leftHits = 30 - player.getUnridePassengerCount();
+                        if(leftHits > 0){
+                            if(leftHits % 5 == 0){
+                                player.getBukkitPlayer().sendMessage(String.format("%sLeft hits to eject the coward[%s%s%s] above you: %s%s", 
+                                        ChatColor.DARK_GRAY, ChatColor.YELLOW, passenger.getName(), ChatColor.DARK_GRAY, ChatColor.GREEN, leftHits));
+                            }
+                        } else {
+                            this.unridePassenger(player);
+                        }
+                    }
+                }else if(player.getBukkitPlayer().getVehicle() != null) {
+                    this.unrideVehicle(player);
+                }
+            }
+        }
+//        dont delete this, it is used to set up every new world.
+//        if(event.getClickedBlock() != null) {
+//            Bukkit.getLogger().info(String.format("Botton: %s", event.getClickedBlock().getLocation()));
+//        }
+        if(event.getClickedBlock() != null && event.getClickedBlock().hasMetadata("buttonId")){
+            List<MetadataValue> values = event.getClickedBlock().getMetadata("buttonId");
+            if(values.size() >= 1) {
+                MetadataValue value = values.get(0);
+                Location location = this.getWorld().getButtonLocationByName(value.asString());
+                if(location != null){
+                    bukkitPlayer.teleport(location);
+                }
+            }
+        }
+        if(bukkitPlayer != null && this.spectators.containsKey(bukkitPlayer.getName())){
+            event.setCancelled(true);
+        }
+    }
+    
+    private void onPlayerJoin(RFBPlayer rfbPlayer) {
+        Player player = rfbPlayer.getBukkitPlayer();
+        // remove invisibility
+        this.plugin.getGame().getGhostManager().setGhost(rfbPlayer.getBukkitPlayer(), false);
+        EngineUtils.clearBukkitPlayer(player);
+        player.setAllowFlight(false);
+        player.setScoreboard(this.rfbScoreboard.getScoreboard());
+        this.rfbScoreboard.assignTeam(rfbPlayer);
+        rfbPlayer.sendMessage(String.format("%sWelcome to %s - Match will start soon!", ChatColor.LIGHT_PURPLE,
+                getName()));
+        rfbPlayer.sendMessage(String.format("%s%sVIP%s %sPlayers can %s%sride%s %sother players and avoid beast's coup", 
+                ChatColor.GOLD, ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_GRAY, ChatColor.YELLOW, ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_GRAY));
+    }
+
+    public synchronized void playerDeath(PlayerDeathEvent event, RFBPlayer rfbPlayer) {
+        final Player bukkitPlayer = event.getEntity();
+        event.getDrops().clear();
+        //if player is spectator just remove and return, dont do anything else
+        if (this.spectators.containsKey(bukkitPlayer.getName())){
+            final RFBPlayer spectator = this.spectators.get(bukkitPlayer.getName());
+            this.unridePassenger(spectator);
+            this.spectators.remove(spectator.getBukkitPlayer().getName());
+            this.setPlayerRulesToSpectator(spectator);
+            return;
+        }
+        switch (this.status) {
+        case IN_PROGRESS:
+        case ALL_WAITING:
+        case BEAST_WAITING:
+            final RFBPlayer player = this.players.remove(bukkitPlayer.getName());
+            if (player != null) {
+                this.unridePassenger(player);
+                // Check if there is a killer
+                final RFBPlayer killer = player.getLastDamageBy() != null ? this.players.get(player.getLastDamageBy()) : null;
+                // if death player is the beast
+                if (this.beast != null && player.getBukkitPlayer().getName().equalsIgnoreCase(beast.getBukkitPlayer().getName())) {
+                    synchronized (this.players) {
+                        // Update Butter Coins in central DB - 5 butter coins for every winner and 1 butter coin else for beast's killer
+                        if(null != killer) {
+                            killer.sendMessage(String.format("%sYou have %skilled%s the %sbeast%s! all the %srunners%s alive are the winners", 
+                                    ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY, ChatColor.GOLD, ChatColor.DARK_GRAY, ChatColor.GOLD, 
+                                    ChatColor.DARK_GRAY));
+                            this.addButterCoinsAsynchronously(killer.getBukkitPlayer(), 5);
+                        }
+                        // Save stats in database for the loser: Beast.
+                        beast.getPlayerModel().setLosses(beast.getPlayerModel().getLosses() + 1);
+                        beast.getPlayerModel().setDeaths(beast.getPlayerModel().getDeaths() + 1);
+                        beast.getPlayerModel().setTimePlayed(beast.getPlayerModel().getTimePlayed() + this.matchCountdown - this.countdown);
+                        this.plugin.getPersistence().updatePlayerAsynchronously(beast.getPlayerModel());
+                        this.beast = null;
+                    }
+                } else {
+                    // Death is a runner
+                    // Save stats in database
+                    player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+                    player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.matchCountdown - this.countdown);
+                    //FIXME dont use ebean and PlayerModel, use our own sql queries
+                    this.plugin.getPersistence().updatePlayerAsynchronously(player.getPlayerModel());
+                    player.getBukkitPlayer().sendMessage(String.format("The beast has killed you, thanks for playing!"));
+                    this.rfbScoreboard.setMatchPlayers(this.players.size());
+                    
+                    //add butter coin for the runner's killer
+                    if (killer != null) {
+                        player.setLastDamageBy(null);
+                        killer.getPlayerModel().setKills(killer.getPlayerModel().getKills() + 1);
+                        if(beast != null){
+                            this.plugin.getPersistence().updatePlayerAsynchronously(beast.getPlayerModel());
+                        }
+                        
+                        // Update Butter Coins in central DB
+                        this.addButterCoinsAsynchronously(killer.getBukkitPlayer(), 1);
+                        // Announce kill
+                        broadcastMessages.add(String.format("%s[%s] %slost, Killed by %s[%s]", ChatColor.RED, player.getBukkitPlayer().getName(), 
+                                ChatColor.DARK_GRAY, ChatColor.YELLOW, killer.getBukkitPlayer().getName()));
+                    }
+                }
+                // send auto respawn packet
+                EngineUtils.respawnPlayer(rfbPlayer.getBukkitPlayer());
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    
+    public synchronized void playerQuit(PlayerQuitEvent event) {
+        String playerName = event.getPlayer().getName();
+        
+
+        //if player is spectator just remove and return, dont do anything else
+        if (this.spectators.containsKey(playerName)){
+            final RFBPlayer spectator = this.spectators.get(playerName);
+            this.unridePassenger(spectator);
+            this.spectators.remove(spectator.getBukkitPlayer().getName());
+            this.setPlayerRulesToSpectator(spectator);
+            return;
+        }
+        
+        final RFBPlayer player = this.players.get(playerName);
+        if (player!= null) {
+            this.unridePassenger(player);
+            this.players.remove(playerName);
+            switch (this.status) {
+            case ALL_WAITING:
+            case BEAST_WAITING:
+            case IN_PROGRESS:
+                // Save player stats
+                player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+                player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.matchCountdown - this.countdown);
+                this.plugin.getPersistence().updatePlayerAsynchronously(player.getPlayerModel());
+
+                this.broadcastMessage(String.format("%s[%s] %squit the game", ChatColor.RED, playerName, ChatColor.DARK_GRAY));
+                
+                if(this.beast != null && playerName.equalsIgnoreCase(this.beast.getBukkitPlayer().getName())){
+                    this.broadcastMessages.add(String.format("%sBEAST%s quit the game, the match finished!", ChatColor.RED, ChatColor.DARK_GRAY));
+                    this.beast = null;
+                }
+                // Update scoreboard
+                this.rfbScoreboard.setMatchPlayers(this.players.size());
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    public void entityDamage(EntityDamageEvent event) {
+        Player bukkitPlayer;
+        // the entity damaged was a player
+        if (event.getEntity() instanceof Player) {
+            bukkitPlayer = (Player) event.getEntity();
+            //dont damage to spectators
+            if(this.spectators.containsKey(bukkitPlayer.getName())){
+                event.setCancelled(true);
+            }
+            final RFBPlayer player = this.players.get(bukkitPlayer.getName());
+            
+            if(event.getCause().equals(DamageCause.FALL)) {
+                event.setCancelled(true);
+                return;
+            }
+            
+            switch (this.status) {
+            case WAITING_FOR_PLAYERS:
+                if(event.getCause().equals(DamageCause.VOID)){
+                    plugin.getGame().backToLobby(player);
+                }
+            case STOPPED:
+            case ALL_WAITING:
+            case BEAST_WAITING:
+                event.setCancelled(true);
+            case IN_PROGRESS:
+                if(event.getCause() != null && event.getCause().equals(DamageCause.VOID)){
+                    if (player != null) {
+                        // Remove dead player from the players list and add him
+                        // to spectators list
+                        this.unridePassenger(player);
+                        this.players.remove(bukkitPlayer.getName());
+                        if(this.beast != null && bukkitPlayer.getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName())){
+                            this.broadcastMessages.add(String.format("%sBEAST%s quit the game, the match finished!", ChatColor.RED, ChatColor.DARK_GRAY));
+                            this.beast = null;
+                        }
+                        // Save stats in database
+                        player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+                        player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.matchCountdown - this.countdown);
+                        this.plugin.getPersistence().updatePlayerAsynchronously(player.getPlayerModel());
+                        
+                        this.broadcastMessage(String.format("%s[%s] %slost.", ChatColor.RED, bukkitPlayer.getName(), ChatColor.GRAY));
+                        
+                        this.addSpectatorToMatch(player, this.world.getPlayerFreeRandomSpawnLocation());
+                        this.rfbScoreboard.setMatchPlayers(this.players.size());
+                    }
+                } else if(event.getCause().equals(DamageCause.ENTITY_ATTACK)){
+                    Player bukkitDamager = (Player) ((EntityDamageByEntityEvent) event).getDamager();
+                    RFBPlayer attackVictim = this.players.get(bukkitPlayer.getName());
+                    RFBPlayer attackDamager = this.players.get(bukkitDamager.getName());
+                                   
+                    // damage was caused for other kind of entity.
+                    if (attackDamager == null || attackVictim == null) {
+                        event.setCancelled(true);
+                        return;
+                    }
+                    //dont hit the passenger
+                    if(attackVictim.getBukkitPlayer().getVehicle() != null){
+                        Entity vehicle = attackVictim.getBukkitPlayer().getVehicle();
+                        if(vehicle instanceof Player){
+                            event.setCancelled(true);
+                            return;
+                        }
+                    }
+
+                    if (this.beast != null && !(attackVictim.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))
+                            && !(attackDamager.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))) {
+                        event.setCancelled(true);
+                        //ride a player
+                        if(attackDamager.getMinecadeAccount().isVip() || attackDamager.getMinecadeAccount().isStaff() || attackDamager.getBukkitPlayer().isOp()) {
+                            attackVictim.getBukkitPlayer().setPassenger(attackDamager.getBukkitPlayer());
+                            attackVictim.getBukkitPlayer().sendMessage(String.format("%sWatch out, you have a %s%sVIP%s%s player[%s%s%s] above you.", 
+                                    ChatColor.DARK_GRAY, ChatColor.GOLD, ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_GRAY, ChatColor.YELLOW, 
+                                    attackDamager.getBukkitPlayer().getName(), ChatColor.DARK_GRAY ));
+                            attackVictim.getBukkitPlayer().sendMessage(String.format("%sHe can't be %sdamaged%s for the %sbeast%s while he is above you.",
+                                    ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY, ChatColor.YELLOW, ChatColor.DARK_GRAY ));
+                            attackVictim.getBukkitPlayer().sendMessage(String.format("%sYou have to %shit%s the %sair%s to eject the passenger",
+                                    ChatColor.DARK_GRAY, ChatColor.YELLOW, ChatColor.DARK_GRAY, ChatColor.GREEN, ChatColor.DARK_GRAY ));
+                            attackDamager.getBukkitPlayer().sendMessage(String.format("%sLeft click %sto air to be %sejected",
+                                    ChatColor.YELLOW, ChatColor.DARK_GRAY, ChatColor.RED));
+                        }
+                    } else {
+                        attackVictim.setLastDamageBy(attackDamager.getBukkitPlayer().getName());
+                    }
+                } else if(event.getCause().equals(DamageCause.SUFFOCATION)) {
+                    if(bukkitPlayer.getVehicle() != null){
+                        event.setCancelled(true);
+                    }
+                } else {
+                    this.unrideVehicle(player);
+                }
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    
+    private void unridePassenger(RFBPlayer vehicle){
+        if(vehicle.getBukkitPlayer().getPassenger() != null){
+            if(vehicle.getBukkitPlayer().getPassenger() instanceof Player){
+                Player passenger = (Player)vehicle.getBukkitPlayer().getPassenger();
+                vehicle.getBukkitPlayer().eject();
+                vehicle.setUnridePassengerCount(0);
+                vehicle.getBukkitPlayer().sendMessage(String.format("%sCoward[%s%s%s] was ejected", 
+                        ChatColor.DARK_GRAY, ChatColor.YELLOW, passenger.getName(), ChatColor.DARK_GRAY));
+            }
+        }
+    }
+    
+    private void unrideVehicle(RFBPlayer passenger){
+        if(passenger != null && passenger.getBukkitPlayer().getVehicle() != null){
+            if(passenger.getBukkitPlayer().getVehicle() instanceof Player){
+                Player vehicle = (Player)passenger.getBukkitPlayer().getVehicle();
+                RFBPlayer rfbVehicle = this.players.get(vehicle.getName());
+                vehicle.eject();
+                rfbVehicle.setUnridePassengerCount(0);
+                passenger.getBukkitPlayer().sendMessage(String.format("%sYou are %swalking%s again!", 
+                        ChatColor.DARK_GRAY, ChatColor.YELLOW, ChatColor.DARK_GRAY));
+            }
+        }
+    }
+    
+    /**
+     * This uses the actual queue to extract players to warm up the match
+     */
+    public synchronized void readyMatch(Queue<RFBPlayer> nextMatchPlayersQueue) {
+        players.clear();
+        RFBPlayer rfbPlayer = nextMatchPlayersQueue.poll();
+        while (null != rfbPlayer) {
+            // move players to spawn points and configure them
+            //teleport players to jail
+            Location spawnPoint = this.world.getNextPlayerSpawn();
+            Bukkit.getLogger().info(String.format("Spawn point for player: [%s] - [%s]", rfbPlayer.getBukkitPlayer().getName(), spawnPoint));
+            if (rfbPlayer.getBukkitPlayer().teleport(spawnPoint)) {
+                DragonBarUtils.handleRelocation(rfbPlayer.getBukkitPlayer(), spawnPoint);
+                players.put(rfbPlayer.getBukkitPlayer().getName(), rfbPlayer);
+                onPlayerJoin(rfbPlayer);
+            } else {
+                Bukkit.getLogger().severe(
+                        String.format("Unable to teleport player: [%s] to match: [%s] - Stopping match...",
+                                rfbPlayer.getBukkitPlayer().getName(), getName()));
+                finishMatch();
+                return;
+            }
+            if (players.size() < requiredPlayerCount) {
+                rfbPlayer = nextMatchPlayersQueue.poll();
+            } else {
+                break;
+            }
+        }
+        countdown = readyCountdown;
+        status = RFBMatch.Status.ALL_WAITING;
+        rfbScoreboard.resetAllScores();
+        this.rfbScoreboard.setMatchPlayers(this.players.size());
+        synchronized (this.players) {
+            // Set beast, if this.beast != null was because some staff people forced to be the beast.
+            if(this.beast == null){
+                beast = this.selectBeast(this.players.values());
+            }
+            
+            if(this.beast != null){
+                beast.getBukkitPlayer().sendMessage(
+                        String.format("%sYou are the %sBEAST%s!", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
+                beast.getBukkitPlayer().teleport(this.world.getBeastSpawnLocation());
+                beast.getBukkitPlayer().getInventory().setArmorContents(getBeastArmor());
+                beast.getBukkitPlayer().setItemInHand(getBeastSword());
+            } else {
+                //TODO something was wrong, end the match.
+            }
+        }
+    }
+    
+    private synchronized void startingMatch() {
+
+        // update countdown and status
+        this.countdown = beastWaitingTime;
+        this.status = Status.BEAST_WAITING;
+        for (RFBPlayer player : players.values()) {
+            player.sendMessage(String.format("%sMatch started!", ChatColor.LIGHT_PURPLE));
+        }
+        //freedom to runners
+        for (RFBPlayer player : this.players.values()) {
+            if (beast != null && !player.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
+                if(player.getBukkitPlayer().teleport(this.world.getPlayerFreeRandomSpawnLocation())){
+//                    DragonBarUtils.setMovingMessage(player.getBukkitPlayer(), String.format("Run, run, run far away as you can, beast[%s%s%s] will be in %s seconds", 
+//                            ChatColor.YELLOW, this.beast.getBukkitPlayer().getName(), ChatColor.RESET, beastWaitingTime), ((countdown * 1f) / (this.matchCountdown * 1f)) * 100f);
+                }
+            }
+        }
+
+        
+    }
+    
+    private synchronized void initMatch() {
+        this.countdown = matchCountdown;
+        this.status = Status.IN_PROGRESS;
+        this.rfbScoreboard.setMatchPlayers(this.players.size());
+        //freedom for the beast
+        if (beast != null && beast.getBukkitPlayer().teleport(this.world.getPlayerFreeRandomSpawnLocation())) {
+            //TODO message: Beast is free
+        }
+    }
+    
+    private synchronized void finishMatch() {
+
+        status = Status.STOPPED;
+        String winners = StringUtils.EMPTY;
+        //pmsScoreboard.resetAllScores();
+        //winners are the runners
+        if(this.countdown <= 0 || this.beast == null){
+            for(RFBPlayer rfbPlayer : this.players.values()) {
+                if(this.beast != null && this.beast.getPlayerModel() != null && 
+                        rfbPlayer.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName())){
+                    // Beast is alive and he lost for countdown = 0
+                    beast.getPlayerModel().setLosses(beast.getPlayerModel().getLosses() + 1);
+                    beast.getPlayerModel().setDeaths(beast.getPlayerModel().getDeaths() + 1);
+                    beast.getPlayerModel().setTimePlayed(beast.getPlayerModel().getTimePlayed() + this.matchCountdown - this.countdown);
+                    this.plugin.getPersistence().updatePlayerAsynchronously(beast.getPlayerModel());
+                    this.beast.getBukkitPlayer().sendMessage(String.format("%sTime is out, there are runners alive, %syou lost!", ChatColor.DARK_GRAY, ChatColor.RED));
+                } else if (rfbPlayer.getPlayerModel() != null) {
+                    //Save stats for winners: runners
+                    rfbPlayer.getPlayerModel().setWins(rfbPlayer.getPlayerModel().getWins() + 1);
+                    rfbPlayer.getPlayerModel().setTimePlayed(rfbPlayer.getPlayerModel().getTimePlayed() + this.matchCountdown - this.countdown);
+                    this.plugin.getPersistence().updatePlayerAsynchronously(rfbPlayer.getPlayerModel());
+                    // Get winners: All runners alive.
+                    winners = StringUtils.isBlank(winners) ? rfbPlayer.getBukkitPlayer().getName() : winners + ", "
+                            + rfbPlayer.getBukkitPlayer().getName();
+                    rfbPlayer.getBukkitPlayer().sendMessage(String.format("%sCongratulations%s, you %swin%s the match!!", ChatColor.GREEN,
+                            ChatColor.DARK_GRAY, ChatColor.GOLD, ChatColor.DARK_GRAY));
+                    // Update Butter Coins in central DB
+                    this.addButterCoinsAsynchronously(rfbPlayer.getBukkitPlayer(), 3);
+                    new FireworksTask(rfbPlayer.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
+                }
+            }
+            broadcastMessages.add(String.format("%sThanks for playing! Winners: %s%s%s", ChatColor.RED, 
+                    ChatColor.YELLOW,  ChatColor.BOLD, winners == null ? "None" : winners));
+        } else {
+            //Beast is the winner
+            if(this.beast != null && players.containsKey(beast.getBukkitPlayer().getName()) && players.size() <= 1) {
+                // Update Butter Coins in central DB
+                this.addButterCoinsAsynchronously(beast.getBukkitPlayer(), 5);
+                
+                // Save player stats
+                beast.getPlayerModel().setWins(beast.getPlayerModel().getWins() + 1);
+                beast.getPlayerModel().setTimePlayed(beast.getPlayerModel().getTimePlayed() + this.matchCountdown - this.countdown);
+                this.plugin.getPersistence().updatePlayerAsynchronously(beast.getPlayerModel());
+
+                // Throw fireworks for winner
+                new FireworksTask(beast.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
+                broadcastMessages.add(String.format("%sThanks for playing! %s%sBEAST%s is the Winner: %s%s%s",ChatColor.RED, ChatColor.GOLD, 
+                        ChatColor.BOLD, ChatColor.RESET, ChatColor.BOLD, ChatColor.YELLOW, winners == null ? "None" : beast.getBukkitPlayer().getName()));
+            }
+        }
+        countdown = 10;
+    }
+    
+    private void resetMatch(){
+        
+        for (RFBPlayer rfbPlayer : players.values()) {
+            this.unridePassenger(rfbPlayer);
+            this.unridePassenger(rfbPlayer);
+            plugin.getGame().backToLobby(rfbPlayer);
+        }
+        for (RFBPlayer rfbPlayer : spectators.values()) {
+            this.setPlayerRulesToSpectator(rfbPlayer);
+            plugin.getGame().backToLobby(rfbPlayer);
+        }
+        this.players.clear();
+        this.spectators.clear();
+        this.beast = null;
+        
+        rfbScoreboard.resetAllScores();
+        // Reload world
+        world.reloadWorld();
+        status = Status.WAITING_FOR_PLAYERS;
+    }
+    
+    private static ItemStack[] getBeastArmor() {
+        final ItemStack[] armor = new ItemStack[4];
+        final ItemStack helmet = new ItemStack(Material.DIAMOND_HELMET, 1);
+        armor[3] = helmet;
+        final ItemStack chestplate = new ItemStack(Material.DIAMOND_CHESTPLATE, 1);
+        armor[2] = chestplate;
+        final ItemStack leggings = new ItemStack(Material.DIAMOND_LEGGINGS, 1);
+        armor[1] = leggings;
+        final ItemStack boots = new ItemStack(Material.DIAMOND_BOOTS, 1);
+        armor[0] = boots;
+        return armor;
+    }
+    
+    private static ItemStack getBeastSword() {
+        final ItemStack spade = new ItemStack(Material.DIAMOND_SWORD, 1);
+        return spade;
+    }
+    
+    public void addSpectatorToMatch(RFBPlayer player, Location respawnLocation){
         this.spectators.put(player.getBukkitPlayer().getName(), player);
         player.getBukkitPlayer().setAllowFlight(true);
         EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
@@ -209,892 +582,48 @@ public class RFBMatch {
         player.getBukkitPlayer().setCanPickupItems(false);
         player.getBukkitPlayer().getInventory().addItem(RFBInventoryEnum.LEAVE_COMPASS.getItemStack());
         player.getBukkitPlayer().sendMessage(String.format("%s%sYou are now spectating the match!", ChatColor.DARK_PURPLE, ChatColor.BOLD));
+        if(player.getBukkitPlayer().isValid()){
+            player.getBukkitPlayer().setScoreboard(this.rfbScoreboard.getScoreboard());
+        }
         //if spectator is added in a respawn location must be null, respawn event make the teleport to respawn point
-        if(respawnLocation != null)
+        if(respawnLocation != null){
+            //Location spawnPoint = this.world.getPlayerFreeRandomSpawnLocation().clone();
             player.getBukkitPlayer().teleport(respawnLocation);
+        }
         
         this.plugin.getServer().getLogger().severe(String.format("adding spectator to match: %s", player.getBukkitPlayer().getName()));
     }
     
-    private RFBStatusEnum changeRFBStatus(RFBStatusEnum status){
-        RFBStatusEnum newStatus = status;
-        switch(status){
-        case RESTARTING:
-            if(this.status == RFBStatusEnum.IN_PROGRESS){
-                newStatus = RFBStatusEnum.RESTARTING;
-            }
-            break;
-        case WAITING_FOR_PLAYERS:
-            //initial status, set when create the RFBMatch
-            if(this.status == RFBStatusEnum.STARTING_MATCH){
-                newStatus = RFBStatusEnum.WAITING_FOR_PLAYERS;
-            }
-            break;
-        case STARTING_MATCH:
-            if(this.status == RFBStatusEnum.WAITING_FOR_PLAYERS){
-                newStatus = RFBStatusEnum.STARTING_MATCH;
-            }
-            break;
-        case ALL_WAITING:
-            if(this.status == RFBStatusEnum.STARTING_MATCH){
-                newStatus = RFBStatusEnum.ALL_WAITING;
-            }
-            break;
-        case BEAST_WAITING:
-            if(this.status == RFBStatusEnum.ALL_WAITING){
-                newStatus = RFBStatusEnum.BEAST_WAITING;
-            }
-            break;
-        case IN_PROGRESS:
-            if(this.status == RFBStatusEnum.BEAST_WAITING){
-                newStatus = RFBStatusEnum.IN_PROGRESS;
-            }
-            break;
-        }
-        return newStatus;
-    }
-
-    /**
-     * Initiate match
-     * 
-     * @author jdgil
-     */
-    public synchronized void initMatch() {
-        this.arena = plugin.getRandomWorld();
-        this.status = this.changeRFBStatus(RFBStatusEnum.ALL_WAITING);
-
-        synchronized (this.players) {
-
-            // Set beast, if this.beast != null was because some staff people forced to be the beast.
-            if(this.beast == null)
-                beast = this.selectBeast(this.players.values());
-
-            beast.getBukkitPlayer().sendMessage(
-                    String.format("%sYou are the %sBEAST%s!", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
-            beast.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getBeastSpawnLocation());
-            
-            //teleport players to jail
-            for (RFBPlayer player : this.players.values()) {
-                player.getBukkitPlayer().setGameMode(GameMode.SURVIVAL);
-                EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
-                if (!player.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
-                    player.getBukkitPlayer().teleport(this.arena.getRandomSpawn());
-                }
-            }
-            //teleport spectators to jail
-            for (RFBPlayer spectator : this.spectators.values()) {
-                spectator.getBukkitPlayer().setGameMode(GameMode.SURVIVAL);
-                if (!spectator.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
-                    spectator.getBukkitPlayer().teleport(this.arena.getRandomSpawn());
-                }
-            }
-        }
-        
-        beast.getBukkitPlayer().getInventory().setArmorContents(getBeastArmor());
-        beast.getBukkitPlayer().setItemInHand(getBeastSpade());
-        
-        this.broadcastMessageToRunners(String.format("%sRunners, get ready!", ChatColor.DARK_GRAY));
-        this.broadcastMessageToRunners(String.format("%sYou will be free in %s[%s]", ChatColor.DARK_GRAY, ChatColor.RED, this.readyCountdown));
-        
-        // Create the task for the count down, freedom for runners
-        if (null != this.timerTask) {
-            this.timerTask.cancel();
-        }
-        this.timerTask = new TimerTask(this, this.readyCountdown, false, true, false, false);
-        this.timerTask.runTaskTimer(this.plugin, 1l, 20l);
-        
-        // Update scoreboard
-        this.rfbScoreboard.init();
-        this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
-    }
-    
-    /**
-     *  Force be the beast
-     * @return error
-     * @author jdgil 
-     */
-    public String forceBeBeast(Player staffPlayer){
-        // Check match status
-        if(this.status.equals(RFBStatusEnum.WAITING_FOR_PLAYERS)){
-
-            if (!plugin.getPersistence().isPlayerStaff(staffPlayer))
-                return "You must be Sky's staff to use this command";
-
-            final RFBPlayer beastSelected = new RFBPlayer(plugin, staffPlayer);
-            this.beast = beastSelected;
-            // non-critical scoreboard code, put it inside a task so if it fails, it won't stop critical code.
-            Bukkit.getScheduler().runTask(plugin, new Runnable() {
-                @Override
-                public void run() {
-                    //set up scoreboard for the beast
-                    RFBMatch.this.rfbScoreboard.assignBeast(beastSelected);
-                    beastSelected.getBukkitPlayer().setScoreboard(RFBMatch.this.rfbScoreboard.getScoreboard());
-                }
-            });
-            return null;
-        }
-        return "Server must be in Waiting For Players status to execute this command.";
-    }
-
-    private RFBPlayer selectBeast(Collection<RFBPlayer> players){
-        final RFBPlayer beastSelected;
-        Collection<RFBPlayer> vipPlayers = new ArrayList<RFBPlayer>();
-        for (RFBPlayer player : players) {
-            if (player.getMinecadeAccount().isVip() && this.isBeastVipDialyPassEnable(player))
-                vipPlayers.add(player);
-        }
-
-        if(vipPlayers.size() > 0){
-            beastSelected =  (RFBPlayer) vipPlayers.toArray()[plugin.getRandom().nextInt(vipPlayers.size())];
-            beastSelected.getPlayerModel().setBeastPass(DateUtils.truncate(new Date(), Calendar.DATE));
-            this.plugin.getPersistence().updatePlayer(beastSelected.getPlayerModel());
-            
-            beastSelected.getBukkitPlayer().sendMessage(String.format("%sSystem has used your Dialy Beast %sVIP %sPass", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
-        } else {
-            beastSelected = (RFBPlayer) players.toArray()[plugin.getRandom().nextInt(players.size())];
-        }
-
-        // non-critical scoreboard code, put it inside a task so if it fails, it won't stop critical code.
-        Bukkit.getScheduler().runTask(plugin, new Runnable() {
-            @Override
-            public void run() {
-                //set up scoreboard for the beast
-                RFBMatch.this.rfbScoreboard.assignBeast(beastSelected);
-                beastSelected.getBukkitPlayer().setScoreboard(RFBMatch.this.rfbScoreboard.getScoreboard());
-            }
-        });
-        return beastSelected;
-    }
-
-    private boolean isBeastVipDialyPassEnable(RFBPlayer player) {
-        if (player.getMinecadeAccount().isVip()) {
-
-            if (player.getPlayerModel().getBeastPass() == null) {
-                player.getPlayerModel().setBeastPass(new Date(0l));
-                this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-            }
-
-            DateFormat dateFormatPass = new SimpleDateFormat("yyyy/MM/dd");
-            DateFormat dateFormatToday = new SimpleDateFormat("yyyy/MM/dd");
-            Date lastTimeBeast = player.getPlayerModel().getBeastPass();
-            dateFormatPass.format(lastTimeBeast);
-            dateFormatToday.format(new Date());
-            if (!((dateFormatPass.format(lastTimeBeast)).compareTo(dateFormatToday.format(new Date())) == 0)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Start match
-     * 
-     * @author kvnamo
-     */
-    public synchronized void startMatch() {
-        // Update server status
-        this.status = this.changeRFBStatus(RFBStatusEnum.BEAST_WAITING);
-        plugin.getPersistence().updateServerStatus(this.status);
-
-        this.timeLeft = this.time;
-        if (null != this.timerTask) {
-            this.timerTask.cancel();
-        }
-        this.timerTask = new TimerTask(this, this.timeLeft, false, false, true, false);
-        this.timerTask.runTaskTimer(plugin, 1l, 20l);
-
-        this.verifyGameOver();
-        // Free the runners now
-        this.broadcastMessageToRunners(String.format("%sBegin to run now, Beast will be free in %s%s %sseconds", ChatColor.DARK_GRAY, ChatColor.RED,
-                this.beastFreedomCountdown, ChatColor.DARK_GRAY));
-        for (RFBPlayer player : this.players.values()) {
-            if (!player.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
-                player.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getFreeRunnersRandomSpawn());
-            }
-        }
-        // Free the spectators now
-        for (RFBPlayer spectator : this.spectators.values()) {
-            if (!spectator.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
-                spectator.getBukkitPlayer().teleport(((RFBBaseWorld) this.arena).getSpectatorSpawnLocation());
-            }
-        }
-        this.broadcastMessageToBeast(String.format("%sBe prepared, get your weapon and armor!", ChatColor.DARK_GRAY));
-        this.broadcastMessageToBeast(String.format("%sYou will be free in %s[%s] %sseconds", ChatColor.DARK_GRAY, ChatColor.RED, this.beastFreedomCountdown,
-                ChatColor.DARK_GRAY));
-        
-        // Free the beast task
-        this.plugin.getServer().getScheduler().runTaskLater(this.plugin, new Runnable() {
-            @Override
-            public void run() {
-                beast.getBukkitPlayer().teleport(((RFBBaseWorld) RFBMatch.this.arena).getFreeRunnersRandomSpawn());
-                RFBMatch.this.status = RFBMatch.this.changeRFBStatus(RFBStatusEnum.IN_PROGRESS);
-            }
-        }, this.beastFreedomCountdown * 20);
-    }
-    
-    /**
-     * Return the beast armor
-     * @return beast armor content.
-     * @author victorv977
-     */
-    private static ItemStack[] getBeastArmor() {      
-
-        final ItemStack[] armor = new ItemStack[4];
-        
-        final ItemStack helmet = new ItemStack(Material.DIAMOND_HELMET, 1);               
-        armor[3] = helmet;
-        
-        final ItemStack chestplate = new ItemStack(Material.DIAMOND_CHESTPLATE, 1);
-        armor[2] = chestplate;
-        
-        final ItemStack leggings = new ItemStack(Material.DIAMOND_LEGGINGS, 1);        
-        armor[1] = leggings;
-        
-        final ItemStack boots = new ItemStack(Material.DIAMOND_BOOTS, 1);        
-        armor[0] = boots;
-        
-        return armor;
-    }
-    
-    /**
-     * Gets the beast spade.
-     * 
-     * @return the beast spade
-     * @author victorv977
-     */
-    private static ItemStack getBeastSpade() {
-        
-        final ItemStack spade = new ItemStack(Material.DIAMOND_SWORD, 1);        
-        // spade.addUnsafeEnchantment(Enchantment.KNOCKBACK, 2); TODO we need this???
-        // spade.addEnchantment(Enchantment.DURABILITY, 3);
-        
-        return spade;
-    }
-    
-    /**
-     *  Force match start
-     * @return error
-     * @author kvnamo 
-     */
-    public String forceStartMatch() {
-        // Check match status
-        if(this.status.equals(RFBStatusEnum.WAITING_FOR_PLAYERS)){
-            // Init match
-            this.initMatch();
-            // Cancel init match timer
-            if(this.timerTask != null){
-                this.timerTask.cancel();
-            }
-            // Start match immediatly
-            this.startMatch();
-            
-            return null;
-        }
-        
-        return "Server must be in Waiting For Players status to execute this command.";
-    }
-
-    /**
-     * Stop the game
-     * 
-     * @author kvnamo
-     */
-    public void stopGame() {
-        // Update server status
-        this.status = this.changeRFBStatus(RFBStatusEnum.RESTARTING);
-        plugin.getPersistence().updateServerStatus(this.status);
-
-        // Send players and spectators to the lobby
-        final Player[] onlinePlayers = this.plugin.getServer().getOnlinePlayers();
-
-        for (Player player : onlinePlayers) {
-//            EngineUtils.disconnect(player.getPlayer(), LOBBY,
-//                    String.format("Thanks for playing! Winners: %s%s%s", ChatColor.BOLD, ChatColor.YELLOW, this.winners == null ? "None" : this.winners));
-            EngineUtils.disconnect(player.getPlayer(), LOBBY, null);
-        }
-
-        // Stop the game
-        this.plugin.getServer().getScheduler().runTaskLater(this.plugin, new Runnable() {
-            @Override
-            public void run() {
-                RFBMatch.this.plugin.getServer().dispatchCommand(Bukkit.getConsoleSender(), "stop");
-            }
-        }, 5 * 20);
-    }
-
-    /**
-     * Game over
-     * 
-     * @author kvnamo
-     */
-    public synchronized void verifyGameOver() {
-        // Finish the game if there is only one player or the match timer is
-        // cero
-        this.plugin.getServer().getLogger().info(String.format("verifyGameOver.timeleft: %s", this.timeLeft));
-        if (this.players.size() <= 1 || this.timeLeft <= 0) {
-            // Save winners stats in database
-            synchronized (this.players) {
-                for (RFBPlayer player : this.players.values()) {
-                    if (this.timeLeft != 0) {
-                        
-                        // Update Butter Coins in central DB
-                        final String playerName = player.getBukkitPlayer().getName();
-                        this.addButterCoins(player.getBukkitPlayer(), 1);
-                        
-                        // Save player stats
-                        player.getPlayerModel().setWins(player.getPlayerModel().getWins() + 1);
-                        player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                        this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-
-                        // Get winners
-                        this.winners = StringUtils.isBlank(this.winners) ? player.getBukkitPlayer().getName() : this.winners + ", "
-                                + player.getBukkitPlayer().getName();
-
-                        // Throw fireworks for winner
-                        new FireworksTask(player.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
-                        
-                    } else {
-                        player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
-                        player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                        this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-                        player.getBukkitPlayer().sendMessage(String.format("%sTime is out, you lost the game!", ChatColor.RED));
-                    }
-                }
-                
-                this.broadcastMessage(String.format("%sThanks for playing! Winners: %s%s%s",ChatColor.RED, ChatColor.BOLD, 
-                        ChatColor.YELLOW, this.winners == null ? "None" : this.winners));
-                // Start finish timer
-                this.timerTask.cancel();
-                this.timeLeft = 10;
-                new TimerTask(this, this.timeLeft, false, false, false, true).runTaskTimer(this.plugin, 11, 20l);
-            }
-        }
-    }
-
-    /**
-     * Hide spectator from other players
-     * 
-     * @param spectator
-     * @author jdgil
-     */
-    private void hidePlayer(Player bukkitPlayer) {
-        for (RFBPlayer player : this.players.values()) {
-            player.getBukkitPlayer().hidePlayer(bukkitPlayer);
-        }
-
-//        for (RFBPlayer player : this.spectators.values()) {
-//            player.getBukkitPlayer().hidePlayer(bukkitPlayer);
-//        }
-    }
-
-    /**
-     * Update the time left to start the match.
-     * 
-     * @param timeLeft
-     * @author jdgil
-     */
-    public void setRemainingTime(int timeLeft) {
-        this.timeLeft = timeLeft;
-        this.rfbScoreboard.setTimeLeft(timeLeft);
-
-        for (RFBPlayer player : this.players.values()) {
-            if ((RFBStatusEnum.STARTING_MATCH.equals(this.status) || RFBStatusEnum.ALL_WAITING.equals(this.status) 
-                    || RFBStatusEnum.BEAST_WAITING.equals(this.status)) && timeLeft < 6) {
-                player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);
-            }
-        }
-    }
-
-    /**
-     * Broadcast message to every player in match
-     * 
-     * @param message
-     * @author jdgil
-     */
-    private void broadcastMessage(String message) {
-        for (RFBPlayer player : this.players.values()) {
-            player.getBukkitPlayer().sendMessage(message);
-        }
-    }
-
-    /**
-     * Broadcast message only to runners in match
-     * 
-     * @param message
-     * @author jdgil
-     */
-    private void broadcastMessageToRunners(String message) {
-        for (RFBPlayer player : this.players.values()) {
-            if (!(player.getBukkitPlayer().getName().equalsIgnoreCase(beast.getBukkitPlayer().getName()))) {
-                player.getBukkitPlayer().sendMessage(message);
-            }
-        }
-    }
-
-    /**
-     * Broadcast message only to the beast in match
-     * 
-     * @param message
-     * @author jdgil
-     */
-    private void broadcastMessageToBeast(String message) {
-        for (RFBPlayer player : this.players.values()) {
-            if (player.getBukkitPlayer().getName().equalsIgnoreCase(beast.getBukkitPlayer().getName())) {
-                player.getBukkitPlayer().sendMessage(message);
-            }
-        }
-    }
-    
-    /**
-     * Broadcast message only to spectators
-     * 
-     * @param message
-     * @author jdgil
-     */
-    private void broadcastMessageToSpectators(String message) {
-        for (RFBPlayer player : this.spectators.values()) {
-                player.getBukkitPlayer().sendMessage(message);
-        }
-    }
-
-    /**
-     * Call when a block breaks.
-     * 
-     * @param event
-     * @author jdgil
-     */
-    public void blockBreak(BlockBreakEvent event) {
-        if (EngineUtils.isOpInCreativeMode(event.getPlayer())) {
-            return;
-        }
-        event.setCancelled(true);
-    }
-
-    /**
-     * Call when a entity damager
-     * 
-     * @param EntityDamageEvent
-     *            .
-     * @author jdgil
-     */
-    public synchronized void playerDeath(PlayerDeathEvent event) {
-        final Player bukkitPlayer = (Player) event.getEntity();
-        
-        //if player is spectator just remove and return, dont do anything else
-        if (this.spectators.containsKey(bukkitPlayer)){
-            this.spectators.remove(bukkitPlayer.getName());
-            return;
-        }
-        switch (this.status) {
-        case IN_PROGRESS:
-            final RFBPlayer player = this.players.remove(bukkitPlayer.getName());
-            final ArrayList<RFBPlayer> playerWinners = new ArrayList<RFBPlayer>();
-            if (player != null) {
-                // Check if there is a killer
-                final RFBPlayer killer = player.getLastDamageBy() != null ? this.players.get(player.getLastDamageBy()) : null;
-                
-                // if death player is the beast
-                if (player.getBukkitPlayer().getName().equalsIgnoreCase(beast.getBukkitPlayer().getName())) {
-                    synchronized (this.players) {
-                        for (RFBPlayer playerMatch : this.players.values()) {
-                            // Save Stats for winners: Runners
-                            playerMatch.getPlayerModel().setWins(playerMatch.getPlayerModel().getWins() + 1);
-                            playerMatch.getPlayerModel().setTimePlayed(playerMatch.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                            this.plugin.getPersistence().updatePlayer(playerMatch.getPlayerModel());
-
-                            // Get winners: All runners alive.
-                            this.winners = StringUtils.isBlank(this.winners) ? playerMatch.getBukkitPlayer().getName() : this.winners + ", "
-                                    + playerMatch.getBukkitPlayer().getName();
-                            //add winner to list
-                            playerWinners.add(playerMatch);
-
-                            // Throw fireworks for winnerdd
-                            new FireworksTask(playerMatch.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
-                        }
-                        
-                        // Update Butter Coins in central DB - 5 butter coins for every winner and 1 butter coin else for beast's killer
-                        this.addButterCoins(killer.getBukkitPlayer(), 5);
-
-                        // Save stats in database for the loser: Beast.
-                        beast.getPlayerModel().setLosses(beast.getPlayerModel().getLosses() + 1);
-                        beast.getPlayerModel().setDeaths(beast.getPlayerModel().getDeaths() + 1);
-                        beast.getPlayerModel().setTimePlayed(beast.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                        this.plugin.getPersistence().updatePlayer(beast.getPlayerModel());
-                    }
-
-                    this.broadcastMessage(String.format("%sThanks for playing! Winners: %s%s%s", ChatColor.RED, 
-                            ChatColor.YELLOW,  ChatColor.BOLD, this.winners == null ? "None" : this.winners));
-                    this.timerTask.cancel();
-                    this.timeLeft = 10;
-                    new TimerTask(this, this.timeLeft, false, false, false, true).runTaskTimer(this.plugin, 11, 20l);
-                } else {
-                    // Death is a runner
-                    // Save stats in database
-                    player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
-                    player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                    this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-                    player.getBukkitPlayer().sendMessage(String.format("The beast has killed you, thanks for playing!"));
-                    //EngineUtils.disconnect(player.getBukkitPlayer(), LOBBY, String.format("The beast has killed you, thanks for playing!"));
-                    this.broadcastMessage(String.format("%s[%s] %slost.", ChatColor.RED, player.getBukkitPlayer().getName(), ChatColor.DARK_GRAY));
-
-                    this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
-                    
-                    //add butter coin for the runner's killer
-                    if (killer != null) {
-                        player.setLastDamageBy(null);
-                        killer.getPlayerModel().setKills(killer.getPlayerModel().getKills() + 1);
-                        this.plugin.getPersistence().updatePlayer(beast.getPlayerModel());
-                        
-                        // Update Butter Coins in central DB
-                        this.addButterCoins(killer.getBukkitPlayer(), 1);
-
-                        // Announce kill
-                        this.broadcastMessage(String.format("%s%s %skilled by %s%s", ChatColor.RED, bukkitPlayer.getName(), ChatColor.DARK_GRAY, ChatColor.RED,
-                                killer.getBukkitPlayer().getName()));
-                    }
-                    
-                    //player death is added as spectator in the respawn event
-                    this.verifyGameOver();
-                }
-
-            }
-            break;
-        case RESTARTING:
-            bukkitPlayer.kickPlayer("Server stop.");
-            break;
-        case STARTING_MATCH:
-        case WAITING_FOR_PLAYERS:
-            bukkitPlayer.teleport(lobbyLocation);
-            break;
-        default:
-            break;
-        }
-    }
-
-    /**
-     * When player exits or gets kicked out of the match
-     * 
-     * @param PlayerQuitEvent
-     *            .
-     * @author: jdgil
-     */
-    public synchronized void playerQuit(PlayerQuitEvent event) {
-        String playerName = event.getPlayer().getName();
-
-        //if player is spectator just remove and return, dont do anything else
-        if (this.spectators.containsKey(playerName)){
-            this.spectators.remove(playerName);
-            return;
-        }
-        
-        final RFBPlayer player = this.players.get(playerName);
-        if (player!= null) {
-            this.players.remove(playerName);
-            switch (this.status) {
-            case WAITING_FOR_PLAYERS:
-                //if beast was forced before by some staff person
-                if(this.beast != null && playerName.equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))
-                    this.beast = null;
-                break;
-            case STARTING_MATCH:
-                //if beast was forced before by some staff person
-                if(this.beast != null && playerName.equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))
-                    this.beast = null;
-                // Check if starting players number is reached
-                int playersRemaining = requiredPlayers - this.players.size();
-                if (playersRemaining > 0) {
-                    // Cancel begin timer task
-                    this.timerTask.cancel();
-
-                    // Update server status
-                    this.status = this.changeRFBStatus(RFBStatusEnum.WAITING_FOR_PLAYERS);
-                    plugin.getPersistence().updateServerStatus(this.status);
-
-                    // Update scoreboard
-                    this.rfbScoreboard.setMatchPlayers(this.requiredPlayers - this.players.size(), false);
-                }
-                break;
-            case ALL_WAITING:
-            case BEAST_WAITING:
-            case IN_PROGRESS:
-                // Save player stats
-                player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
-                player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-
-                this.broadcastMessage(String.format("%s[%s] %squit the game", ChatColor.RED, playerName, ChatColor.DARK_GRAY));
-                
-                if(this.beast != null && playerName.equalsIgnoreCase(this.beast.getBukkitPlayer().getName())){
-                    this.broadcastMessageToRunners(String.format("%sBEAST%s quit the game, the match finished!", ChatColor.RED, ChatColor.DARK_GRAY));
-                    
-                    //task to stop the match
-                    this.timerTask.cancel();
-                    this.timeLeft = 10;
-                    new TimerTask(this, this.timeLeft, false, false, false, true).runTaskTimer(this.plugin, 11, 20l);
-                } else {
-                    this.verifyGameOver();
-                }
-
-                // Update scoreboard
-                this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
-                break;
-            default:
-                break;
-            }
-        }
-    }
-    
-    public void playerToggleFlight(PlayerToggleFlightEvent  event){
-        Player bukkitPlayer = event.getPlayer();
-        if(bukkitPlayer != null && this.players.containsKey(bukkitPlayer.getName())){
-            event.setCancelled(true);
-        }
-    }
-    
-    public void entityShootBowEvent(EntityShootBowEvent event){
-        if(event.getEntity() instanceof Player){
-            Player player = (Player)event.getEntity();
-            if(player != null && this.spectators.containsKey(player.getName())){
-                event.setCancelled(true);
-            }
-        }
-    }
-    
-    public void inventoryOpenEvent(InventoryOpenEvent event){
-       if(event.getPlayer() instanceof Player){
-           Player bukkitPlayer =  (Player)event.getPlayer();
-           if(bukkitPlayer != null && this.spectators.containsKey(bukkitPlayer.getName())){
-               event.setCancelled(true);
-           }
-       }
-    }
-
-    /**
-     * Call when a entity damager
-     * 
-     * @param EntityDamageEvent
-     *            .
-     * @author kvnamo
-     */
-    public void entityDamage(EntityDamageEvent event) {
-        Player bukkitPlayer;
-        // the entity damaged was a player
-        if (event.getEntity() instanceof Player) {            
-            bukkitPlayer = (Player) event.getEntity();
-            //dont damage to spectators
-            if(this.spectators.containsKey(bukkitPlayer.getName())){
-                event.setCancelled(true);
-            }
-            switch (event.getCause()) {
-            // the cause was a fall to void
-            case VOID:
-                switch (this.status) {
-                case IN_PROGRESS:
-                    final RFBPlayer player = this.players.get(bukkitPlayer.getName());
-                    if (player != null) {
-                        // Remove dead player from the players list and add him
-                        // to spectators list
-                        this.players.remove(bukkitPlayer.getName());
-                        this.hidePlayer(bukkitPlayer);
-                        this.spectators.put(bukkitPlayer.getName(), player);
-
-                        // Save stats in database
-                        player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
-                        player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
-                        this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-
-                        bukkitPlayer.teleport(this.arena.getRandomSpawn());
-                        bukkitPlayer.sendMessage(String.format("%s You are now spectating the game.", ChatColor.YELLOW));
-                        this.broadcastMessage(String.format("%s[%s] %slost.", ChatColor.RED, bukkitPlayer.getName(), ChatColor.GRAY));
-
-                        this.rfbScoreboard.setMatchPlayers(this.players.size(), true);
-                        this.verifyGameOver();
-                    }
-                    break;
-                case RESTARTING:
-                    bukkitPlayer.kickPlayer("Server stop.");
-                    break;
-                case STARTING_MATCH:
-                case WAITING_FOR_PLAYERS:
-                    bukkitPlayer.teleport(lobbyLocation);
-                    break;
-                default:
-                    break;
-                }
-                break;
-            case FALL:
-                final RFBPlayer player = this.players.get(bukkitPlayer.getName());
-                if (player != null) {
-                    event.setCancelled(true);
-                }
-                break;
-            case ENTITY_ATTACK:
-                Player bukkitDamager = (Player) ((EntityDamageByEntityEvent) event).getDamager();
-                RFBPlayer attackVictim = this.players.get(bukkitPlayer.getName());
-                RFBPlayer attackDamager = this.players.get(bukkitDamager.getName());
-
-                // damage was caused for other kind of entity.
-                if (attackDamager == null || attackVictim == null) {
-                    event.setCancelled(true);
-                    return;
-                }
-
-                if (!(attackVictim.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))
-                        && !(attackDamager.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))) {
-                    event.setCancelled(true);
-                } else {
-                    attackVictim.setLastDamageBy(attackDamager.getBukkitPlayer().getName());
-                }
-                break;
-            case FIRE_TICK:
-                if(this.arena == null || this.status != RFBStatusEnum.IN_PROGRESS){
-                    event.setCancelled(true);
-                }
-                    
-                break;
-            default:
-                break;
-
-            }
-        }
-    }
-    
-    public void playerRespawn(PlayerRespawnEvent event){
-        final Player bukkitPlayer = event.getPlayer();
-        EngineUtils.clearBukkitPlayer(bukkitPlayer);
-        switch(this.status){
-            case WAITING_FOR_PLAYERS:
-            case STARTING_MATCH:
-                event.setRespawnLocation(this.lobbyLocation);
-                break;
-            case ALL_WAITING:
-                event.setRespawnLocation(this.arena.getRandomSpawn());
-                break;
-            case BEAST_WAITING:
-            case IN_PROGRESS:
-                event.setRespawnLocation(((RFBBaseWorld) RFBMatch.this.arena).getFreeRunnersRandomSpawn());
-                break;
-            case RESTARTING:
-                EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
-                break;
-        }
-        RFBPlayer player = new RFBPlayer(this.plugin, bukkitPlayer);
-         //add player death as a espectator
-        if(!player.getBukkitPlayer().getName().equalsIgnoreCase(beast.getBukkitPlayer().getName())){
-            this.addSpectatorToMatch(player, null);
-        } else {
-            Bukkit.getScheduler().runTask(plugin, new Runnable() {
-                @Override
-                public void run() {
-                    EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
-                }
-            });
-        }
-    }
-
-    /**
-     * Gets inventory player ready for match
-     * 
-     * @param message
-     * @author jdgil
-     */
-    private void setupInventoryToMatch(RFBPlayer player) {
+    private void setPlayerRulesToSpectator(RFBPlayer player){
+        player.getBukkitPlayer().setAllowFlight(false);
         EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
-        player.getBukkitPlayer().getInventory().addItem(RFBInventoryEnum.INSTRUCTIONS.getItemStack());
-        player.getBukkitPlayer().getInventory().addItem(this.getPlayerStats(player));
-        player.getBukkitPlayer().getInventory().addItem(RFBInventoryEnum.LEAVE_COMPASS.getItemStack());
+        this.showPlayer(player.getBukkitPlayer());
     }
     
-
-    private void teleportToLobby(Player player, String message){
-        final Player bukkitPlayer = player;
-        final String msg = message;
-        Bukkit.getScheduler().runTask(plugin, new Runnable() {
-            @Override
-            public void run() {
-                EngineUtils.disconnect(bukkitPlayer, LOBBY, msg);
+    private void tickPlayers() {
+        for (RFBPlayer rfbPlayer : players.values()) {
+            for (String message : broadcastMessages) {
+                rfbPlayer.sendMessage(message);
             }
-        });
-    }
-
-    /**
-     * Loads the player stats
-     * 
-     * @author jdgil
-     */
-    private ItemStack getPlayerStats(RFBPlayer player) {
-
-        ItemStack stats = RFBInventoryEnum.STATS_BOOK.getItemStack();
-        BookMeta statsMeta = (BookMeta) stats.getItemMeta();
-
-        DecimalFormat decimalFormat = new DecimalFormat("0.000");
-        String kdr = (double) player.getPlayerModel().getLosses() == 0 ? "0" : decimalFormat.format((double) player.getPlayerModel().getKills()
-                / (double) player.getPlayerModel().getLosses());
-        String timePlayed = decimalFormat.format((double) player.getPlayerModel().getTimePlayed() / (double) 86400);
-
-        statsMeta.setPages(String.format(
-                "%s%s%s STATS! \n\n\n%s %sWins: %s%s\n %sKills: %s%s\n %sDeaths: %s%s\n %sLooses: %s%s\n %sButter Coins: %s%s\n %sKDR: %s%s\n %sTime played: %s%s days.",
-                ChatColor.BOLD, ChatColor.RED, player.getBukkitPlayer().getName().toUpperCase(), ChatColor.DARK_GRAY, ChatColor.BOLD, ChatColor.DARK_GRAY,
-                player.getPlayerModel().getWins(), ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getKills(), ChatColor.BOLD,
-                ChatColor.DARK_GRAY, player.getPlayerModel().getDeaths(), ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getLosses(),
-                ChatColor.BOLD, ChatColor.DARK_GRAY, player.getMinecadeAccount().getButterCoins(), ChatColor.BOLD, ChatColor.DARK_GRAY, kdr, ChatColor.BOLD, ChatColor.DARK_GRAY, timePlayed));
-                stats.setItemMeta(statsMeta);
-
-        return stats;
-    }
-
-    /**
-     * When player chats
-     * 
-     * @param player
-     * @author kvnamo
-     */
-    public void chatMessage(AsyncPlayerChatEvent event) {
-        final RFBPlayer player = this.players.get(event.getPlayer().getName());
-
-        // Spectators are not allowed to send messages.
-        if (player == null) {
-            event.getPlayer().sendMessage(String.format("%sOnly living players can send messages.", ChatColor.GRAY));
-            event.setCancelled(true);
-            return;
+            updateDragonBar(rfbPlayer.getBukkitPlayer());
+            //Bukkit.getLogger().info(String.format("status: [%s] - countdown: [%s]", getStatus(), countdown));
+            // Play sounds
+            if (countdown == 1) {
+                rfbPlayer.getBukkitPlayer().playSound(rfbPlayer.getBukkitPlayer().getLocation(), Sound.LEVEL_UP, 3f, 1.5f);
+            } else if (countdown <= 5) {
+                rfbPlayer.getBukkitPlayer().playSound(rfbPlayer.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);
+            }
         }
-
-        // Last message.
-        if (StringUtils.isNotBlank(player.getLastMessage()) && player.getLastMessage().equals(event.getMessage().toLowerCase())) {
-            event.getPlayer().sendMessage(String.format("%sPlease don't send the same message multiple times!", ChatColor.GRAY));
-            event.setCancelled(true);
-        }
-
-        player.setLastMessage(event.getMessage().toLowerCase());
-        PlayerTagEnum playerTag = PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount());
-        event.setFormat(playerTag.getPrefix() + ChatColor.WHITE + "%s" + ChatColor.GRAY + ": %s");
-    }
-
-    /**
-     * Call when player press right click button
-     * 
-     * @param bukkitPlayer
-     * @author kvnamo
-     */
-    public void rightClick(PlayerInteractEvent event) {
-        Player bukkitPlayer = event.getPlayer();
-        ItemStack itemInHand = bukkitPlayer.getItemInHand();
         
-        if (RFBInventoryEnum.LEAVE_COMPASS.getMaterial().equals(itemInHand.getType())) {
-            EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+        for (RFBPlayer rfbSpectator : spectators.values()) {
+            for (String message : broadcastMessages) {
+                rfbSpectator.sendMessage(message);
+            }
         }
-        if(bukkitPlayer != null && this.spectators.containsKey(bukkitPlayer.getName())){
-            event.setCancelled(true);
-        }
+        broadcastMessages.clear();
     }
     
-    /**
-     * Add butter coins in sky central db
-     * @param player
-     * @param butterCoins
-     * @author Kvnamo
-     */
-    private void addButterCoins(final Player bukkitPlayer, final int butterCoins){
+    private void addButterCoinsAsynchronously(final Player bukkitPlayer, final int butterCoins){
         
         // Update Butter Coins in central DB
         Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
@@ -1110,5 +639,303 @@ public class RFBMatch {
         
         bukkitPlayer.sendMessage(String.format("%s[ButterCoins] %sYou have earned %s ButterCoins!", 
             ChatColor.GOLD, ChatColor.YELLOW, butterCoins));
+    }
+    
+    private void updateDragonBar(Player player) {
+        switch (getStatus()) {
+        case ALL_WAITING:
+            DragonBarUtils.setMessage(player, String.format("Match Starting In: %s", String.valueOf(Math.max(0, countdown))),
+                    ((countdown * 1f) / (readyCountdown * 1f)) * 100f);
+            break;
+        case BEAST_WAITING:
+//            Bukkit.getLogger().info(
+//                    String.format("matchCountdown: [%s] - countdown: [%s] - percentage: [%s]", matchCountdown, countdown,
+//                            ((countdown * 1f) / (matchCountdown * 1f)) * 100f));
+            if(this.beast != null && this.beast.getBukkitPlayer().getName().equalsIgnoreCase(player.getName())){
+                DragonBarUtils.setMessage(player, String.format("Match Starting In: %s", String.valueOf(Math.max(0, countdown))),
+                        ((countdown * 1f) / (beastWaitingTime * 1f)) * 100f);
+            } else {
+                if(this.beast != null){
+                    DragonBarUtils.setMovingMessage(player, String.format("beast[%s%s%s] will be free in %s%s%s seconds, " +
+                            "Run, run faster as you can or the beast will kill you", ChatColor.YELLOW, this.beast.getBukkitPlayer().getName(), 
+                            ChatColor.RESET, ChatColor.GREEN, countdown, ChatColor.RESET), ((countdown * 1f) / (this.matchCountdown * 1f)) * 100f, 4);
+                }
+            }
+            break;
+        case IN_PROGRESS:
+//            Bukkit.getLogger().info(
+//                    String.format("matchTime: [%s] - countdown: [%s] - percentage: [%s]", matchTime, countdown,
+//                            ((countdown * 1f) / (matchTime * 1f)) * 100f));
+            if(this.beast != null && this.beast.getBukkitPlayer().getName().equalsIgnoreCase(player.getName())){
+                DragonBarUtils.setMessage(player, String.format("Time Left: %s", String.valueOf(Math.max(0, countdown))),
+                        ((countdown * 1f) / (matchCountdown * 1f)) * 100f);
+            } else {
+                if(this.beast != null){
+                    Double distance = beast.getBukkitPlayer().getLocation().distance(player.getLocation());
+                    DragonBarUtils.setMessageWithHeader(player, String.format("Distance from beast: %s%s%s", 
+                            ChatColor.GOLD, distance.intValue(), ChatColor.RESET), ((countdown * 1f) / (matchCountdown * 1f)) * 100f);
+                }
+            }
+            break;
+        case STOPPED:
+//            Bukkit.getLogger().info(
+//                    String.format("resetTime: [%s] - countdown: [%s] - percentage: [%s]", 10, countdown,
+//                            ((countdown * 1f) / (matchTime * 1f)) * 100f));
+            DragonBarUtils.setMessage(player, String.format("Back To Lobby In: %s", String.valueOf(Math.max(0, countdown))),
+                    ((countdown * 1f) / (10 * 1f)) * 100f);
+            break;
+        default:
+            DragonBarUtils.removeBar(player);
+            break;
+        }
+    }
+    
+    private synchronized void updateScoreboard() {
+        switch(this.status){
+        case ALL_WAITING:
+            break;
+        case BEAST_WAITING:
+            break;
+        case IN_PROGRESS:
+            this.rfbScoreboard.setMatchPlayers(this.players.size());
+            this.rfbScoreboard.setTimeLeft(this.countdown);
+            break;
+        case STOPPED:
+            break;
+        case WAITING_FOR_PLAYERS:
+            break;
+        default:
+            break;
+        
+        }
+    }
+    
+    private RFBPlayer selectBeast(Collection<RFBPlayer> players){
+        RFBPlayer beastSelected = null;
+        if (players.size() <= 0){
+            return null;
+        }
+        synchronized(this.players) {
+            Player beastPlayer = plugin.getPassManager().selectPlayer(castListToPlayers(players));
+            if(beastPlayer != null){
+                RFBPlayer beastRFBPlayer = this.players.get(beastPlayer.getName());
+                if(beastRFBPlayer != null){
+                    beastSelected = beastRFBPlayer;
+                }
+            }
+            if(beastSelected == null){
+                Collection<RFBPlayer> tempPlayers = new ArrayList<RFBPlayer>(players);
+                beastSelected = (RFBPlayer) tempPlayers.toArray()[plugin.getRandom().nextInt(tempPlayers.size())];
+            }
+        }
+
+        // non-critical scoreboard code, put it inside a task so if it fails, it won't stop critical code.
+        final RFBPlayer finalBeast = beastSelected;
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                //set up scoreboard for the beast
+                RFBMatch.this.rfbScoreboard.assignBeast(finalBeast);
+                finalBeast.getBukkitPlayer().setScoreboard(RFBMatch.this.rfbScoreboard.getScoreboard());
+            }
+        });
+        return finalBeast;
+    }
+
+    private Collection<Player> castListToPlayers(Collection<RFBPlayer> players){
+        Collection<Player> bukkitPlayers = new ArrayList<>();
+        for(RFBPlayer rfbPlayer : players){
+            bukkitPlayers.add(rfbPlayer.getBukkitPlayer());
+        }
+        return bukkitPlayers;
+    }
+    
+    public void updateLobbyPortal(){
+        switch(this.status){
+        case ALL_WAITING:
+        case BEAST_WAITING:
+        case IN_PROGRESS:
+            this.plugin.getPortalManager().enablePortal(this.getName());
+            break;
+        case STOPPED:
+        case WAITING_FOR_PLAYERS:
+            this.plugin.getPortalManager().disablePortal(this.getName());
+            break;
+        default:
+            break;
+        }
+    }
+    
+    private void hidePlayer(Player bukkitPlayer) {
+        for (RFBPlayer player : this.players.values()) {
+            player.getBukkitPlayer().hidePlayer(bukkitPlayer);
+        }
+    }
+    
+    private void showPlayer(Player bukkitPlayer) {
+        for (RFBPlayer player : this.players.values()) {
+            player.getBukkitPlayer().showPlayer(bukkitPlayer);
+        }
+
+        for (RFBPlayer player : this.spectators.values()) {
+            player.getBukkitPlayer().showPlayer(bukkitPlayer);
+        }
+    }
+    
+    private void broadcastMessage(String message) {
+        for (RFBPlayer player : this.players.values()) {
+            player.getBukkitPlayer().sendMessage(message);
+        }
+    }
+    
+    public void addBroadcastMessage(String message) {
+        broadcastMessages.add(message);
+    }
+    
+    public int getRequiredPlayerCount() {
+        return requiredPlayerCount;
+    }
+    
+    public String getName() {
+        return null != world ? world.getName() : null;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+    
+    private class MatchTimerTask extends BukkitRunnable {
+
+        @Override
+        public void run() {
+            // logic depends on match status
+
+            // statuses with countdown
+            switch (getStatus()) {
+            case ALL_WAITING:
+            case BEAST_WAITING:
+            case IN_PROGRESS:
+            case STOPPED:
+                countdown--;
+                break;
+            default:
+                break;
+            }
+
+            // status transitions
+            switch (getStatus()) {
+            case ALL_WAITING:
+                if (beast == null || !players.containsKey(beast.getBukkitPlayer().getName()) || players.size() <= 1 || countdown <= 0) {
+                    startingMatch();
+                }
+                break;
+            case BEAST_WAITING:
+                if (beast == null || !players.containsKey(beast.getBukkitPlayer().getName()) || players.size() <= 1 || countdown <= 0) {
+                    initMatch();
+                }
+                break;
+            case IN_PROGRESS:
+                if (beast == null || !players.containsKey(beast.getBukkitPlayer().getName()) || players.size() <= 1 || countdown <= 0) {
+                    finishMatch();
+                }
+                break;
+            case STOPPED:
+                if (countdown <= 0) {
+                    resetMatch();
+                }
+                break;
+            default:
+                break;
+            }
+
+            tickPlayers();
+            updateLobbyPortal();
+            updateScoreboard();
+        }
+
+    }
+    
+    public enum Status {
+        WAITING_FOR_PLAYERS,
+        ALL_WAITING,
+        BEAST_WAITING,
+        IN_PROGRESS, 
+        STOPPED
+    }
+    
+    private class MatchScoreboard {
+
+        private final String OBJECTIVE_TITLE = String.format("%s%s", ChatColor.DARK_RED, "Run From The Beast");
+        private final String OBJECTIVE = "RFB";
+        private final String PLAYERS = String.format("%s%s", ChatColor.GREEN, "Runners");
+        private final String BEAST = "Beast";
+        private final String TIME_LEFT = String.format("%s%s", ChatColor.GOLD, "Time Left");
+
+        private final Scoreboard scoreboard;
+        private final Objective sideObjective;
+
+        public MatchScoreboard() {
+            // Creates new scoreboard
+            scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+            sideObjective = this.scoreboard.registerNewObjective(OBJECTIVE, OBJECTIVE);
+            sideObjective.setDisplayName(OBJECTIVE_TITLE);
+            sideObjective.setDisplaySlot(DisplaySlot.SIDEBAR);
+
+            // Create teams
+            if(this.scoreboard.getTeams().isEmpty()){
+                for(PlayerTagEnum tag: PlayerTagEnum.values()){
+                    this.scoreboard.registerNewTeam(tag.name()).setPrefix(tag.getPrefix());
+                }
+            }
+        }
+
+        public void assignTeam(RFBPlayer player){
+            PlayerTagEnum playerTag = PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount());
+            
+            Team team = this.scoreboard.getTeam(playerTag.name());
+            team.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
+            team.setPrefix(playerTag.getPrefix());
+        }
+
+        public void assignBeast(RFBPlayer beast){
+            Team team = this.scoreboard.getTeam(PlayerTagEnum.getTag(beast.getBukkitPlayer(), beast.getMinecadeAccount()).name());
+            team.removePlayer(Bukkit.getOfflinePlayer(beast.getBukkitPlayer().getName()));
+            Team beastTeam = this.scoreboard.getTeam(BEAST);
+            if (beastTeam == null) {
+                beastTeam = this.scoreboard.registerNewTeam(BEAST);
+            }
+            Iterator<OfflinePlayer> beastPlayers = beastTeam.getPlayers().iterator();
+            while(beastPlayers.hasNext()){
+                beastTeam.removePlayer(beastPlayers.next());
+            }
+            beastTeam.addPlayer(Bukkit.getOfflinePlayer(beast.getBukkitPlayer().getName()));
+            beastTeam.setPrefix(String.format("[%s%s%s%s] ", ChatColor.RED, ChatColor.BOLD, BEAST, ChatColor.RESET));
+        }
+
+        public Scoreboard getScoreboard() {
+            return scoreboard;
+        }
+
+        public void resetAllScores() {
+            for (OfflinePlayer player : scoreboard.getPlayers()) {
+                this.scoreboard.resetScores(player);
+            }
+        }
+        
+        public void setMatchPlayers(int matchPlayers){
+            int runners = matchPlayers - 1 < 0 ? 0 : matchPlayers - 1;
+            this.scoreboard.getObjective(OBJECTIVE).getScore(Bukkit.getOfflinePlayer(PLAYERS)).setScore(runners);
+        }
+        
+        public void setTimeLeft(int timeLeft) {
+            this.scoreboard.getObjective(OBJECTIVE).getScore(Bukkit.getOfflinePlayer(TIME_LEFT)).setScore(timeLeft);
+        }
+    }
+
+    /**
+     * @return the world
+     */
+    public RFBWorld getWorld() {
+        return world;
     }
 }
