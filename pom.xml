@@ -1,10 +1,11 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+  
   <parent>
     <groupId>com.minecade</groupId>
     <artifactId>minecade-build</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <relativePath>../MinecadeEngine/pom.xml</relativePath>
+    <version>1.1-SNAPSHOT</version>
   </parent>
   
   <groupId>com.minecade.minecade-build</groupId>
@@ -14,9 +15,38 @@
   <name>minecade-run-from-the-beast</name>
   
   <properties>
-    <minecade.engine.version>0.0.1-SNAPSHOT</minecade.engine.version>
+    <minecade.engine.version>1.1-SNAPSHOT</minecade.engine.version>
     <main.class>com.minecade.rfb.plugin.RunFromTheBeastPlugin</main.class>
   </properties>
+  
+  <repositories>
+    <repository>
+      <id>bukkit-repo</id>
+      <url>http://repo.bukkit.org/content/groups/public/</url>
+    </repository>
+    <repository>  
+       <id>minecade-release-repo</id>  
+       <name>Minecade Release Repository</name>  
+       <url>http://repo.mineca.de/nexus/content/repositories/releases/</url>  
+       <releases>  
+         <enabled>true</enabled>  
+       </releases>  
+       <snapshots>  
+         <enabled>false</enabled>  
+       </snapshots>  
+     </repository>  
+     <repository>  
+       <id>minecade-snapshot-repo</id>  
+       <name>Minecade Snapshot Repository</name>  
+       <url>http://repo.mineca.de/nexus/content/repositories/snapshots/</url>  
+       <releases>  
+         <enabled>false</enabled>  
+       </releases>  
+       <snapshots>  
+         <enabled>true</enabled>  
+       </snapshots>  
+     </repository>
+  </repositories>
 
   <dependencies>
     <dependency>
@@ -25,31 +55,8 @@
       <version>${minecade.engine.version}</version>
     </dependency>
   </dependencies>
+  
   <build>
     <finalName>${project.name}</finalName>
   </build>
-  
-    <profiles>
-      <profile>
-            <id>dev</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <database.url>jdbc:mysql://localhost:3306/sky_network</database.url>
-                <database.username>root</database.username>
-                <database.password>root</database.password>
-                <log4j.rootLogger>INFO, DB, stdout</log4j.rootLogger>
-            </properties>
-        </profile>
-        <profile>
-            <id>pro</id>
-            <properties>
-                <database.url>jdbc:mysql://172.23.24.95:3306/sky_network</database.url>
-                <database.username>runbeast</database.username>
-                <database.password>hrg2mTGy2JAh</database.password>
-                <log4j.rootLogger>WARN, DB, stdout</log4j.rootLogger>
-            </properties>
-        </profile>
-    </profiles>
 </project>
