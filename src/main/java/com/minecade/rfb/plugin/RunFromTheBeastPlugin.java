@@ -1,7 +1,15 @@
 package com.minecade.rfb.plugin;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.ResourceBundle;
 
+import com.minecade.rfb.util.UTF8Control;
+
+import net.minecraft.util.org.apache.commons.lang3.StringUtils;
+
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
@@ -17,6 +25,7 @@ import com.minecade.rfb.listener.RFBListener;
 public class RunFromTheBeastPlugin extends MinecadePlugin {
 
     private static final String RUNFROMTHEBEAST_COMMANDS_PACKAGE = "com.minecade.rfb.command";
+    private List<String> announcements;
     private RFBPersistence persistence;
 
     private RFBGame game;
@@ -27,10 +36,10 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
 
     @Override
     public void onEnable() {
-        super.setPassManager(new PassManager(this, "Beast"));
+        super.setPassManager(new PassManager(this, "game.protagonist.name"));
         super.onEnable();
         getLogger().info("onEnable has been invoked!");
-
+        
         // Save config.yml default values and completes the new values from the
         // jar file
         saveDefaultConfig();
@@ -57,8 +66,10 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
             @Override
             public void run() {
                 final String announcement = RunFromTheBeastPlugin.this.getRandomAnnouncement();
-                for (final Player online : RunFromTheBeastPlugin.this.getServer().getOnlinePlayers()) {
-                    online.sendMessage(announcement);
+                if(announcement != null && !announcement.isEmpty()){
+                    for (final Player online : RunFromTheBeastPlugin.this.getServer().getOnlinePlayers()) {
+                        online.sendMessage(announcement);
+                    }
                 }
             }
         }, 6000L, 6000L);
@@ -78,17 +89,24 @@ public class RunFromTheBeastPlugin extends MinecadePlugin {
      * @return the random announcement
      */
     public String getRandomAnnouncement() {
-        final List<String> announcements = getConfig().getStringList("server.announcements");
-        return ChatColor
-                .translateAlternateColorCodes('&', announcements.get(getRandom().nextInt(announcements.size())));
+        if(announcements == null){
+            boolean nextAnnouncement = true;
+            int i = 1;
+            String announcement = StringUtils.EMPTY;
+            announcements = new  ArrayList<String>();
+            while(nextAnnouncement){
+                announcement = RunFromTheBeastPlugin.getMessage(String.format("game.announcements%s", String.valueOf(i)));
+                if(announcement.equalsIgnoreCase(String.format("game.announcements%s", String.valueOf(i)))){
+                    nextAnnouncement = false;
+                } else {
+                    announcements.add(announcement);
+                    i++;
+                }
+            }
+        }
+        return announcements.get(getRandom().nextInt(announcements.size()));
     }
 
-    /**
-     * (non-Javadoc)
-     * 
-     * @see org.bukkit.plugin.java.JavaPlugin#onDisable()
-     * @author: kvnamo
-     */
     @Override
     public void onDisable() {
         getLogger().info("onDisable has been invoked!");

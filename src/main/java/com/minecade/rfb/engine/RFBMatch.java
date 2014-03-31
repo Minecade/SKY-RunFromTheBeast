@@ -16,6 +16,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
+import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.Action;
@@ -29,6 +30,7 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
+import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
@@ -121,8 +123,8 @@ public class RFBMatch {
                         int leftHits = 30 - player.getUnridePassengerCount();
                         if(leftHits > 0){
                             if(leftHits % 5 == 0){
-                                player.getBukkitPlayer().sendMessage(String.format("%sLeft hits to eject the coward[%s%s%s] above you: %s%s", 
-                                        ChatColor.DARK_GRAY, ChatColor.YELLOW, passenger.getName(), ChatColor.DARK_GRAY, ChatColor.GREEN, leftHits));
+                                player.getBukkitPlayer().sendMessage(String.format(
+                                        RunFromTheBeastPlugin.getMessage("player.eject.passenger"), passenger.getName(), leftHits));
                             }
                         } else {
                             this.unridePassenger(player);
@@ -143,13 +145,23 @@ public class RFBMatch {
                 MetadataValue value = values.get(0);
                 Location location = this.getWorld().getButtonLocationByName(value.asString());
                 if(location != null){
-                    bukkitPlayer.teleport(location);
+                    this.teleportPlayer(bukkitPlayer, location);
                 }
             }
         }
         if(bukkitPlayer != null && this.spectators.containsKey(bukkitPlayer.getName())){
             event.setCancelled(true);
         }
+    }
+    
+    private boolean teleportPlayer(Player bukkitPlayer, Location location){
+        //teleport does not work if player has a passenger
+        if(!bukkitPlayer.isEmpty()){
+            bukkitPlayer.eject();
+        } else if (bukkitPlayer.isInsideVehicle()){
+            bukkitPlayer.leaveVehicle();
+        }
+        return bukkitPlayer.teleport(location);
     }
     
     private void onPlayerJoin(RFBPlayer rfbPlayer) {
@@ -160,10 +172,8 @@ public class RFBMatch {
         player.setAllowFlight(false);
         player.setScoreboard(this.rfbScoreboard.getScoreboard());
         this.rfbScoreboard.assignTeam(rfbPlayer);
-        rfbPlayer.sendMessage(String.format("%sWelcome to %s - Match will start soon!", ChatColor.LIGHT_PURPLE,
-                getName()));
-        rfbPlayer.sendMessage(String.format("%s%sVIP%s %sPlayers can %s%sride%s %sother players and avoid beast's coup", 
-                ChatColor.GOLD, ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_GRAY, ChatColor.YELLOW, ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_GRAY));
+        rfbPlayer.sendMessage(String.format(RunFromTheBeastPlugin.getMessage("match.welcome.message"), getName()));
+        rfbPlayer.sendMessage(RunFromTheBeastPlugin.getMessage("match.welcome.message2"));
     }
 
     public synchronized void playerDeath(PlayerDeathEvent event, RFBPlayer rfbPlayer) {
@@ -191,10 +201,10 @@ public class RFBMatch {
                     synchronized (this.players) {
                         // Update Butter Coins in central DB - 5 butter coins for every winner and 1 butter coin else for beast's killer
                         if(null != killer) {
-                            killer.sendMessage(String.format("%sYou have %skilled%s the %sbeast%s! all the %srunners%s alive are the winners", 
-                                    ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY, ChatColor.GOLD, ChatColor.DARK_GRAY, ChatColor.GOLD, 
-                                    ChatColor.DARK_GRAY));
-                            this.addButterCoinsAsynchronously(killer.getBukkitPlayer(), 5);
+                            killer.sendMessage(RunFromTheBeastPlugin.getMessage("runner.kill.beast"));
+                            if(!RunFromTheBeastPlugin.getInstance().isOlimpoNetwork()) {
+                                this.addButterCoinsAsynchronously(killer.getBukkitPlayer(), 5);
+                            }
                         }
                         // Save stats in database for the loser: Beast.
                         beast.getPlayerModel().setLosses(beast.getPlayerModel().getLosses() + 1);
@@ -210,7 +220,7 @@ public class RFBMatch {
                     player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.matchCountdown - this.countdown);
                     //FIXME dont use ebean and PlayerModel, use our own sql queries
                     this.plugin.getPersistence().updatePlayerAsynchronously(player.getPlayerModel());
-                    player.getBukkitPlayer().sendMessage(String.format("The beast has killed you, thanks for playing!"));
+                    player.getBukkitPlayer().sendMessage(RunFromTheBeastPlugin.getMessage("player.killed.bybeast"));
                     this.rfbScoreboard.setMatchPlayers(this.players.size());
                     
                     //add butter coin for the runner's killer
@@ -222,10 +232,12 @@ public class RFBMatch {
                         }
                         
                         // Update Butter Coins in central DB
-                        this.addButterCoinsAsynchronously(killer.getBukkitPlayer(), 1);
+                        if(!RunFromTheBeastPlugin.getInstance().isOlimpoNetwork()) {
+                            this.addButterCoinsAsynchronously(killer.getBukkitPlayer(), 1);
+                        }
                         // Announce kill
-                        broadcastMessages.add(String.format("%s[%s] %slost, Killed by %s[%s]", ChatColor.RED, player.getBukkitPlayer().getName(), 
-                                ChatColor.DARK_GRAY, ChatColor.YELLOW, killer.getBukkitPlayer().getName()));
+                        broadcastMessages.add(String.format(RunFromTheBeastPlugin.getMessage("runner.killed.message"), player.getBukkitPlayer().getName(), 
+                                killer.getBukkitPlayer().getName()));
                     }
                 }
                 // send auto respawn packet
@@ -263,10 +275,10 @@ public class RFBMatch {
                 player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.matchCountdown - this.countdown);
                 this.plugin.getPersistence().updatePlayerAsynchronously(player.getPlayerModel());
 
-                this.broadcastMessage(String.format("%s[%s] %squit the game", ChatColor.RED, playerName, ChatColor.DARK_GRAY));
+                this.broadcastMessage(String.format(RunFromTheBeastPlugin.getMessage("runner.quit.message"), playerName));
                 
                 if(this.beast != null && playerName.equalsIgnoreCase(this.beast.getBukkitPlayer().getName())){
-                    this.broadcastMessages.add(String.format("%sBEAST%s quit the game, the match finished!", ChatColor.RED, ChatColor.DARK_GRAY));
+                    this.broadcastMessages.add(RunFromTheBeastPlugin.getMessage("beast.quit.message"));
                     this.beast = null;
                 }
                 // Update scoreboard
@@ -311,7 +323,7 @@ public class RFBMatch {
                         this.unridePassenger(player);
                         this.players.remove(bukkitPlayer.getName());
                         if(this.beast != null && bukkitPlayer.getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName())){
-                            this.broadcastMessages.add(String.format("%sBEAST%s quit the game, the match finished!", ChatColor.RED, ChatColor.DARK_GRAY));
+                            this.broadcastMessages.add(RunFromTheBeastPlugin.getMessage("beast.quit.message"));
                             this.beast = null;
                         }
                         // Save stats in database
@@ -319,7 +331,7 @@ public class RFBMatch {
                         player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.matchCountdown - this.countdown);
                         this.plugin.getPersistence().updatePlayerAsynchronously(player.getPlayerModel());
                         
-                        this.broadcastMessage(String.format("%s[%s] %slost.", ChatColor.RED, bukkitPlayer.getName(), ChatColor.GRAY));
+                        this.broadcastMessage(String.format(RunFromTheBeastPlugin.getMessage("player.lost.message"), bukkitPlayer.getName()));
                         
                         this.addSpectatorToMatch(player, this.world.getPlayerFreeRandomSpawnLocation());
                         this.rfbScoreboard.setMatchPlayers(this.players.size());
@@ -347,20 +359,42 @@ public class RFBMatch {
                             && !(attackDamager.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))) {
                         event.setCancelled(true);
                         //ride a player
-                        if(attackDamager.getMinecadeAccount().isVip() || attackDamager.getMinecadeAccount().isStaff() || attackDamager.getBukkitPlayer().isOp()) {
+                        if(attackDamager.getMinecadeAccount().isVip() || attackDamager.getMinecadeAccount().isTitan() || attackDamager.getMinecadeAccount().isStaff() || attackDamager.getBukkitPlayer().isOp()) {
                             attackVictim.getBukkitPlayer().setPassenger(attackDamager.getBukkitPlayer());
-                            attackVictim.getBukkitPlayer().sendMessage(String.format("%sWatch out, you have a %s%sVIP%s%s player[%s%s%s] above you.", 
-                                    ChatColor.DARK_GRAY, ChatColor.GOLD, ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_GRAY, ChatColor.YELLOW, 
-                                    attackDamager.getBukkitPlayer().getName(), ChatColor.DARK_GRAY ));
-                            attackVictim.getBukkitPlayer().sendMessage(String.format("%sHe can't be %sdamaged%s for the %sbeast%s while he is above you.",
-                                    ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY, ChatColor.YELLOW, ChatColor.DARK_GRAY ));
-                            attackVictim.getBukkitPlayer().sendMessage(String.format("%sYou have to %shit%s the %sair%s to eject the passenger",
-                                    ChatColor.DARK_GRAY, ChatColor.YELLOW, ChatColor.DARK_GRAY, ChatColor.GREEN, ChatColor.DARK_GRAY ));
-                            attackDamager.getBukkitPlayer().sendMessage(String.format("%sLeft click %sto air to be %sejected",
-                                    ChatColor.YELLOW, ChatColor.DARK_GRAY, ChatColor.RED));
+                            attackVictim.getBukkitPlayer().sendMessage(String.format(RunFromTheBeastPlugin.getMessage("player.ride.passenger"), 
+                                    attackDamager.getBukkitPlayer().getName()));
+                            attackVictim.getBukkitPlayer().sendMessage(RunFromTheBeastPlugin.getMessage("player.ride.passenger2"));
+                            attackVictim.getBukkitPlayer().sendMessage(RunFromTheBeastPlugin.getMessage("player.ride.passenger3"));
+                            attackDamager.getBukkitPlayer().sendMessage(RunFromTheBeastPlugin.getMessage("rider.eject.message"));
                         }
                     } else {
                         attackVictim.setLastDamageBy(attackDamager.getBukkitPlayer().getName());
+                    }
+                }else if(event.getCause().equals(DamageCause.PROJECTILE)) {
+                    if(((EntityDamageByEntityEvent) event).getDamager() instanceof Arrow){
+                        Arrow arrowDamager = (Arrow) ((EntityDamageByEntityEvent) event).getDamager();
+                        RFBPlayer attackVictim = this.players.get(bukkitPlayer.getName());
+                        
+                        ProjectileSource source = arrowDamager.getShooter();
+                        if(source instanceof Player){
+                            Player shooterPlayer = (Player)source;
+                            if(shooterPlayer != null){
+                                RFBPlayer attackDamager = this.players.get(shooterPlayer.getName());
+                                
+                                // damage was caused for other kind of entity.
+                                if (attackDamager == null || attackVictim == null) {
+                                    event.setCancelled(true);
+                                    return;
+                                }
+                                
+                                if (this.beast != null && !(attackVictim.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))
+                                        && !(attackDamager.getBukkitPlayer().getName().equalsIgnoreCase(this.beast.getBukkitPlayer().getName()))) {
+                                    event.setCancelled(true);
+                                    return;
+                                }
+                            }
+                        }
+                        
                     }
                 } else if(event.getCause().equals(DamageCause.SUFFOCATION)) {
                     if(bukkitPlayer.getVehicle() != null){
@@ -382,8 +416,8 @@ public class RFBMatch {
                 Player passenger = (Player)vehicle.getBukkitPlayer().getPassenger();
                 vehicle.getBukkitPlayer().eject();
                 vehicle.setUnridePassengerCount(0);
-                vehicle.getBukkitPlayer().sendMessage(String.format("%sCoward[%s%s%s] was ejected", 
-                        ChatColor.DARK_GRAY, ChatColor.YELLOW, passenger.getName(), ChatColor.DARK_GRAY));
+                vehicle.getBukkitPlayer().sendMessage(String.format(RunFromTheBeastPlugin.getMessage("player.eject.passenger.successful"), 
+                        passenger.getName()));
             }
         }
     }
@@ -395,8 +429,7 @@ public class RFBMatch {
                 RFBPlayer rfbVehicle = this.players.get(vehicle.getName());
                 vehicle.eject();
                 rfbVehicle.setUnridePassengerCount(0);
-                passenger.getBukkitPlayer().sendMessage(String.format("%sYou are %swalking%s again!", 
-                        ChatColor.DARK_GRAY, ChatColor.YELLOW, ChatColor.DARK_GRAY));
+                passenger.getBukkitPlayer().sendMessage(RunFromTheBeastPlugin.getMessage("player.unride.message"));
             }
         }
     }
@@ -412,7 +445,7 @@ public class RFBMatch {
             //teleport players to jail
             Location spawnPoint = this.world.getNextPlayerSpawn();
             Bukkit.getLogger().info(String.format("Spawn point for player: [%s] - [%s]", rfbPlayer.getBukkitPlayer().getName(), spawnPoint));
-            if (rfbPlayer.getBukkitPlayer().teleport(spawnPoint)) {
+            if (this.teleportPlayer(rfbPlayer.getBukkitPlayer(), spawnPoint)) {
                 DragonBarUtils.handleRelocation(rfbPlayer.getBukkitPlayer(), spawnPoint);
                 players.put(rfbPlayer.getBukkitPlayer().getName(), rfbPlayer);
                 onPlayerJoin(rfbPlayer);
@@ -440,8 +473,7 @@ public class RFBMatch {
             }
             
             if(this.beast != null){
-                beast.getBukkitPlayer().sendMessage(
-                        String.format("%sYou are the %sBEAST%s!", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
+                beast.getBukkitPlayer().sendMessage(String.format(RunFromTheBeastPlugin.getMessage("beast.selected")));
                 beast.getBukkitPlayer().teleport(this.world.getBeastSpawnLocation());
                 beast.getBukkitPlayer().getInventory().setArmorContents(getBeastArmor());
                 beast.getBukkitPlayer().setItemInHand(getBeastSword());
@@ -457,12 +489,12 @@ public class RFBMatch {
         this.countdown = beastWaitingTime;
         this.status = Status.BEAST_WAITING;
         for (RFBPlayer player : players.values()) {
-            player.sendMessage(String.format("%sMatch started!", ChatColor.LIGHT_PURPLE));
+            player.sendMessage(RunFromTheBeastPlugin.getMessage("match.started"));
         }
         //freedom to runners
         for (RFBPlayer player : this.players.values()) {
             if (beast != null && !player.getBukkitPlayer().getName().equals(beast.getBukkitPlayer().getName())) {
-                if(player.getBukkitPlayer().teleport(this.world.getPlayerFreeRandomSpawnLocation())){
+                if(this.teleportPlayer(player.getBukkitPlayer(), this.world.getPlayerFreeRandomSpawnLocation())){
 //                    DragonBarUtils.setMovingMessage(player.getBukkitPlayer(), String.format("Run, run, run far away as you can, beast[%s%s%s] will be in %s seconds", 
 //                            ChatColor.YELLOW, this.beast.getBukkitPlayer().getName(), ChatColor.RESET, beastWaitingTime), ((countdown * 1f) / (this.matchCountdown * 1f)) * 100f);
                 }
@@ -497,7 +529,7 @@ public class RFBMatch {
                     beast.getPlayerModel().setDeaths(beast.getPlayerModel().getDeaths() + 1);
                     beast.getPlayerModel().setTimePlayed(beast.getPlayerModel().getTimePlayed() + this.matchCountdown - this.countdown);
                     this.plugin.getPersistence().updatePlayerAsynchronously(beast.getPlayerModel());
-                    this.beast.getBukkitPlayer().sendMessage(String.format("%sTime is out, there are runners alive, %syou lost!", ChatColor.DARK_GRAY, ChatColor.RED));
+                    this.beast.getBukkitPlayer().sendMessage(RunFromTheBeastPlugin.getMessage("beast.timeout.lost"));
                 } else if (rfbPlayer.getPlayerModel() != null) {
                     //Save stats for winners: runners
                     rfbPlayer.getPlayerModel().setWins(rfbPlayer.getPlayerModel().getWins() + 1);
@@ -506,15 +538,13 @@ public class RFBMatch {
                     // Get winners: All runners alive.
                     winners = StringUtils.isBlank(winners) ? rfbPlayer.getBukkitPlayer().getName() : winners + ", "
                             + rfbPlayer.getBukkitPlayer().getName();
-                    rfbPlayer.getBukkitPlayer().sendMessage(String.format("%sCongratulations%s, you %swin%s the match!!", ChatColor.GREEN,
-                            ChatColor.DARK_GRAY, ChatColor.GOLD, ChatColor.DARK_GRAY));
+                    rfbPlayer.getBukkitPlayer().sendMessage(RunFromTheBeastPlugin.getMessage("runner.timeout.winner"));
                     // Update Butter Coins in central DB
                     this.addButterCoinsAsynchronously(rfbPlayer.getBukkitPlayer(), 3);
                     new FireworksTask(rfbPlayer.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
                 }
             }
-            broadcastMessages.add(String.format("%sThanks for playing! Winners: %s%s%s", ChatColor.RED, 
-                    ChatColor.YELLOW,  ChatColor.BOLD, winners == null ? "None" : winners));
+            broadcastMessages.add(String.format(RunFromTheBeastPlugin.getMessage("match.timeout.winners"), winners == null ? "None" : winners));
         } else {
             //Beast is the winner
             if(this.beast != null && players.containsKey(beast.getBukkitPlayer().getName()) && players.size() <= 1) {
@@ -528,8 +558,7 @@ public class RFBMatch {
 
                 // Throw fireworks for winner
                 new FireworksTask(beast.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
-                broadcastMessages.add(String.format("%sThanks for playing! %s%sBEAST%s is the Winner: %s%s%s",ChatColor.RED, ChatColor.GOLD, 
-                        ChatColor.BOLD, ChatColor.RESET, ChatColor.BOLD, ChatColor.YELLOW, winners == null ? "None" : beast.getBukkitPlayer().getName()));
+                broadcastMessages.add(String.format(RunFromTheBeastPlugin.getMessage("beast.match.winner"), winners == null ? "None" : beast.getBukkitPlayer().getName()));
             }
         }
         countdown = 10;
@@ -581,17 +610,17 @@ public class RFBMatch {
         this.hidePlayer(player.getBukkitPlayer());
         player.getBukkitPlayer().setCanPickupItems(false);
         player.getBukkitPlayer().getInventory().addItem(RFBInventoryEnum.LEAVE_COMPASS.getItemStack());
-        player.getBukkitPlayer().sendMessage(String.format("%s%sYou are now spectating the match!", ChatColor.DARK_PURPLE, ChatColor.BOLD));
+        player.getBukkitPlayer().sendMessage(RunFromTheBeastPlugin.getMessage("spectator.join.match"));
         if(player.getBukkitPlayer().isValid()){
             player.getBukkitPlayer().setScoreboard(this.rfbScoreboard.getScoreboard());
         }
         //if spectator is added in a respawn location must be null, respawn event make the teleport to respawn point
         if(respawnLocation != null){
             //Location spawnPoint = this.world.getPlayerFreeRandomSpawnLocation().clone();
-            player.getBukkitPlayer().teleport(respawnLocation);
+            this.teleportPlayer(player.getBukkitPlayer(), respawnLocation);
         }
         
-        this.plugin.getServer().getLogger().severe(String.format("adding spectator to match: %s", player.getBukkitPlayer().getName()));
+        this.plugin.getServer().getLogger().info(String.format("adding spectator to match: %s", player.getBukkitPlayer().getName()));
     }
     
     private void setPlayerRulesToSpectator(RFBPlayer player){
@@ -634,31 +663,29 @@ public class RFBMatch {
                     SettingsManager.getInstance().getInt(SettingsEnum.BUTTERCOIN_MULTIPLIER) * butterCoins ;
                 
                 RFBMatch.this.plugin.getPersistence().addButterCoins(bukkitPlayer.getName(), vipButterCoins);
+                bukkitPlayer.sendMessage(String.format(RunFromTheBeastPlugin.getMessage("player.coins.earned"), vipButterCoins));
             }
         });
         
-        bukkitPlayer.sendMessage(String.format("%s[ButterCoins] %sYou have earned %s ButterCoins!", 
-            ChatColor.GOLD, ChatColor.YELLOW, butterCoins));
     }
     
     private void updateDragonBar(Player player) {
         switch (getStatus()) {
         case ALL_WAITING:
-            DragonBarUtils.setMessage(player, String.format("Match Starting In: %s", String.valueOf(Math.max(0, countdown))),
-                    ((countdown * 1f) / (readyCountdown * 1f)) * 100f);
+            DragonBarUtils.setMessage(player, String.format(RunFromTheBeastPlugin.getMessage("dragonbar.starting.message")
+                    , String.valueOf(Math.max(0, countdown))), ((countdown * 1f) / (readyCountdown * 1f)) * 100f);
             break;
         case BEAST_WAITING:
 //            Bukkit.getLogger().info(
 //                    String.format("matchCountdown: [%s] - countdown: [%s] - percentage: [%s]", matchCountdown, countdown,
 //                            ((countdown * 1f) / (matchCountdown * 1f)) * 100f));
             if(this.beast != null && this.beast.getBukkitPlayer().getName().equalsIgnoreCase(player.getName())){
-                DragonBarUtils.setMessage(player, String.format("Match Starting In: %s", String.valueOf(Math.max(0, countdown))),
-                        ((countdown * 1f) / (beastWaitingTime * 1f)) * 100f);
+                DragonBarUtils.setMessage(player, String.format(RunFromTheBeastPlugin.getMessage("dragonbar.starting.message"), 
+                        String.valueOf(Math.max(0, countdown))), ((countdown * 1f) / (beastWaitingTime * 1f)) * 100f);
             } else {
                 if(this.beast != null){
-                    DragonBarUtils.setMovingMessage(player, String.format("beast[%s%s%s] will be free in %s%s%s seconds, " +
-                            "Run, run faster as you can or the beast will kill you", ChatColor.YELLOW, this.beast.getBukkitPlayer().getName(), 
-                            ChatColor.RESET, ChatColor.GREEN, countdown, ChatColor.RESET), ((countdown * 1f) / (this.matchCountdown * 1f)) * 100f, 4);
+                    DragonBarUtils.setMovingMessage(player, String.format(RunFromTheBeastPlugin.getMessage("dragonbar.beastfree.message"), 
+                            this.beast.getBukkitPlayer().getName(), countdown), ((countdown * 1f) / (this.matchCountdown * 1f)) * 100f, 4);
                 }
             }
             break;
@@ -667,13 +694,13 @@ public class RFBMatch {
 //                    String.format("matchTime: [%s] - countdown: [%s] - percentage: [%s]", matchTime, countdown,
 //                            ((countdown * 1f) / (matchTime * 1f)) * 100f));
             if(this.beast != null && this.beast.getBukkitPlayer().getName().equalsIgnoreCase(player.getName())){
-                DragonBarUtils.setMessage(player, String.format("Time Left: %s", String.valueOf(Math.max(0, countdown))),
+                DragonBarUtils.setMessage(player, String.format(RunFromTheBeastPlugin.getMessage("dragonbar.running.message"), String.valueOf(Math.max(0, countdown))),
                         ((countdown * 1f) / (matchCountdown * 1f)) * 100f);
             } else {
                 if(this.beast != null){
                     Double distance = beast.getBukkitPlayer().getLocation().distance(player.getLocation());
-                    DragonBarUtils.setMessageWithHeader(player, String.format("Distance from beast: %s%s%s", 
-                            ChatColor.GOLD, distance.intValue(), ChatColor.RESET), ((countdown * 1f) / (matchCountdown * 1f)) * 100f);
+                    DragonBarUtils.setMessageWithHeader(player, String.format(RunFromTheBeastPlugin.getMessage("dragonbar.distance.message"), 
+                            distance.intValue()), ((countdown * 1f) / (matchCountdown * 1f)) * 100f);
                 }
             }
             break;
@@ -681,7 +708,7 @@ public class RFBMatch {
 //            Bukkit.getLogger().info(
 //                    String.format("resetTime: [%s] - countdown: [%s] - percentage: [%s]", 10, countdown,
 //                            ((countdown * 1f) / (matchTime * 1f)) * 100f));
-            DragonBarUtils.setMessage(player, String.format("Back To Lobby In: %s", String.valueOf(Math.max(0, countdown))),
+            DragonBarUtils.setMessage(player, String.format(RunFromTheBeastPlugin.getMessage("dragonbar.stopped.message"), String.valueOf(Math.max(0, countdown))),
                     ((countdown * 1f) / (10 * 1f)) * 100f);
             break;
         default:
@@ -865,11 +892,11 @@ public class RFBMatch {
     
     private class MatchScoreboard {
 
-        private final String OBJECTIVE_TITLE = String.format("%s%s", ChatColor.DARK_RED, "Run From The Beast");
+        private final String OBJECTIVE_TITLE = RunFromTheBeastPlugin.getMessage("scoreboard.title");
         private final String OBJECTIVE = "RFB";
-        private final String PLAYERS = String.format("%s%s", ChatColor.GREEN, "Runners");
-        private final String BEAST = "Beast";
-        private final String TIME_LEFT = String.format("%s%s", ChatColor.GOLD, "Time Left");
+        private final String PLAYERS = RunFromTheBeastPlugin.getMessage("scoreboard.runners");
+        private final String BEAST = RunFromTheBeastPlugin.getMessage("scoreboard.beast");
+        private final String TIME_LEFT = RunFromTheBeastPlugin.getMessage("scorebaord.time");
 
         private final Scoreboard scoreboard;
         private final Objective sideObjective;
@@ -884,7 +911,11 @@ public class RFBMatch {
             // Create teams
             if(this.scoreboard.getTeams().isEmpty()){
                 for(PlayerTagEnum tag: PlayerTagEnum.values()){
-                    this.scoreboard.registerNewTeam(tag.name()).setPrefix(tag.getPrefix());
+                    if(!RunFromTheBeastPlugin.getMessage(String.format("rank.%s", tag.name().toLowerCase())).equalsIgnoreCase(String.format("rank.%s", tag.name().toLowerCase()))){
+                        this.scoreboard.registerNewTeam(tag.name()).setPrefix(RunFromTheBeastPlugin.getMessage(String.format("rank.%s", tag.name().toLowerCase())));
+                    } else {
+                        this.scoreboard.registerNewTeam(tag.name()).setPrefix(tag.getPrefix());
+                    }
                 }
             }
         }
@@ -894,7 +925,12 @@ public class RFBMatch {
             
             Team team = this.scoreboard.getTeam(playerTag.name());
             team.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
-            team.setPrefix(playerTag.getPrefix());
+            
+            if(!RunFromTheBeastPlugin.getMessage(String.format("rank.%s", playerTag.name().toLowerCase())).equalsIgnoreCase(String.format("rank.%s", playerTag.name().toLowerCase()))){
+                team.setPrefix(RunFromTheBeastPlugin.getMessage(String.format("rank.%s", playerTag.name().toLowerCase())));
+            } else {
+                team.setPrefix(playerTag.getPrefix());
+            }
         }
 
         public void assignBeast(RFBPlayer beast){

@@ -12,13 +12,15 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import com.minecade.rfb.plugin.RunFromTheBeastPlugin;
+
 /**
  * @author WindowsUser
  *
  */
 public enum RFBInventoryEnum implements RFBInventory {
     
-    INSTRUCTIONS(ChatColor.RED + "Instructions book", Material.WRITTEN_BOOK) {
+    INSTRUCTIONS(RunFromTheBeastPlugin.getMessage("items.instructionsbook.title"), Material.WRITTEN_BOOK) {
         
         /**
          * @return InstructionBook
@@ -28,22 +30,16 @@ public enum RFBInventoryEnum implements RFBInventory {
         public ItemStack getItemStack(){
             ItemStack book = new ItemStack(getMaterial(), 1);
             BookMeta bookMeta = (BookMeta) book.getItemMeta();
-            bookMeta.setAuthor("Run From The Beast");
-            bookMeta.setTitle("Instructions and Rules");
+            bookMeta.setAuthor(RunFromTheBeastPlugin.getMessage("items.book.author.pag"));
+            bookMeta.setTitle(RunFromTheBeastPlugin.getMessage("items.instructionsbook.title.pag"));
             bookMeta.setPages(
-                String.format("%s%sWELCOME TO RUN FROM THE BEAST! \n\n\n%s" +
-                    "Run from the beast until get own weapon and armor in th end of the world and come back to kill him! Runners alive when the beast death wins the game", 
-                    ChatColor.BOLD, ChatColor.RED, ChatColor.DARK_GRAY),
-                String.format("%s%sRULES! \n\n\n %s1. Run far away as you can.\n" +
-                    "2. Get your weapon and armor in the end of the world.\n" +
-                    "3. Come back, look for the beast and kill him!" +
-                    "4. If you are the beast: kill everybody!!!",
-                    ChatColor.BOLD, ChatColor.RED, ChatColor.DARK_GRAY));
+                String.format(RunFromTheBeastPlugin.getMessage("items.instructionsbook.instruccions")),
+                String.format(RunFromTheBeastPlugin.getMessage("items.instructionsbook.rules")));
             book.setItemMeta(bookMeta);
             return book;
         }
     }, 
-    LEAVE_COMPASS(ChatColor.RED + "Leave Game", Material.COMPASS) {
+    LEAVE_COMPASS(RunFromTheBeastPlugin.getMessage("items.leave.title"), Material.COMPASS) {
         /**
          * @return leaveCompass Item.
          * @author jdgil
@@ -55,7 +51,7 @@ public enum RFBInventoryEnum implements RFBInventory {
             meta.setDisplayName(ChatColor.RESET + getName());
             
             List<String> colored = new ArrayList<>();
-            colored.add(ChatColor.GRAY + "Click to Go to Lobby");
+            colored.add(RunFromTheBeastPlugin.getMessage("items.leave.lore"));
             meta.setLore(colored);
             
             compass.setItemMeta(meta);
@@ -63,7 +59,7 @@ public enum RFBInventoryEnum implements RFBInventory {
         }
     },
     
-    STATS_BOOK(ChatColor.RED + "Stats book", Material.WRITTEN_BOOK) {
+    STATS_BOOK(RunFromTheBeastPlugin.getMessage("items.stats.title"), Material.WRITTEN_BOOK) {
         
         /**
          * @return stats book Item.
@@ -73,8 +69,8 @@ public enum RFBInventoryEnum implements RFBInventory {
         public ItemStack getItemStack() {
             ItemStack stats = new ItemStack(getMaterial(), 1);
             BookMeta statsMeta = (BookMeta) stats.getItemMeta();
-            statsMeta.setAuthor("ButterSlap");
-            statsMeta.setTitle("Stats Book");
+            statsMeta.setAuthor(RunFromTheBeastPlugin.getMessage("items.book.author.pag"));
+            statsMeta.setTitle(RunFromTheBeastPlugin.getMessage("items.stats.title"));
             stats.setItemMeta(statsMeta);
             return stats;
         }

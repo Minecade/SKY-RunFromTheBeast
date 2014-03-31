@@ -37,6 +37,10 @@ public class RFBPlayer {
     public boolean isVip() {
         return null != minecadeAccount ? minecadeAccount.isVip() : false;
     }
+    
+    public boolean isTitan() {
+        return null != minecadeAccount ? minecadeAccount.isTitan() : false;
+    }
 
     public void setInAir(boolean inAir) {
         this.inAir = inAir;

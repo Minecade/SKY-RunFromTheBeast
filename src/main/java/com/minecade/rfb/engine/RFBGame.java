@@ -245,15 +245,20 @@ public class RFBGame {
             // message equals last message - cancel
             if (StringUtils.isNotBlank(rfbPlayer.getLastMessage())
                     && rfbPlayer.getLastMessage().equalsIgnoreCase(event.getMessage())) {
-                event.getPlayer().sendMessage(
-                        String.format("%sPlease don't send the same message multiple times!", ChatColor.GRAY));
+                event.getPlayer().sendMessage(RunFromTheBeastPlugin.getMessage("game.chat.spam"));
                 event.setCancelled(true);
             }
             // keep record of the last message
             rfbPlayer.setLastMessage(event.getMessage());
             // format according to tag
             PlayerTagEnum playerTag = PlayerTagEnum.getTag(rfbPlayer.getBukkitPlayer(), rfbPlayer.getMinecadeAccount());
-            event.setFormat(String.format("%s%s%%s%s: %%s", playerTag.getPrefix(), ChatColor.WHITE, ChatColor.GRAY));
+            
+            if(!RunFromTheBeastPlugin.getMessage(String.format("rank.%s", playerTag.name().toLowerCase())).equalsIgnoreCase(String.format("rank.%s", playerTag.name().toLowerCase()))){
+                event.setFormat(String.format("%s%s%%s%s: %%s", RunFromTheBeastPlugin.getMessage(String.format("rank.%s", playerTag.name().toLowerCase())), ChatColor.WHITE, ChatColor.GRAY));
+            } else {
+                event.setFormat(String.format("%s%s%%s%s: %%s", playerTag.getPrefix(), ChatColor.WHITE, ChatColor.GRAY));
+            }
+            
             // select recipient depending on location: lobby/match
             final RFBMatch match = getPlayerMatch(rfbPlayer.getBukkitPlayer());
             event.getRecipients().clear();
@@ -280,7 +285,7 @@ public class RFBGame {
         RFBPlayer player = this.gamePlayers.get(playerName);
         // The player is in lobby
         if (player != null) {
-            if((player.getMinecadeAccount().isVip() || plugin.getPersistence().isPlayerStaff(player.getBukkitPlayer()))) {
+            if((player.getMinecadeAccount().isVip() || player.getMinecadeAccount().isTitan() || plugin.getPersistence().isPlayerStaff(player.getBukkitPlayer()))) {
                 String matchPortal = plugin.getPortalManager().playerIsInMatchPortal(player.getBukkitPlayer());
                 if(matchPortal != null){
                     if(this.matches.containsKey(matchPortal)){
@@ -291,8 +296,7 @@ public class RFBGame {
                     }
                 }
             } else {
-                String message = String.format("%sOnly %s%sVIP%s %sPlayers can join to %sMatchs%s as %sspectators", ChatColor.DARK_GRAY, ChatColor.GOLD,
-                        ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY, ChatColor.DARK_PURPLE);
+                String message = RunFromTheBeastPlugin.getMessage("game.nonvip.spectator");
                 if(!message.equalsIgnoreCase(player.getLastMessage())){
                     player.getBukkitPlayer().sendMessage(message);
                     player.setLastMessage(message);
@@ -302,6 +306,19 @@ public class RFBGame {
     }
     
     private void onPlayerJoinLobby(RFBPlayer rfbPlayer) {
+        if(RunFromTheBeastPlugin.getInstance().isOlimpoNetwork()){
+            if(!(rfbPlayer.getMinecadeAccount().isStaff() || rfbPlayer.getMinecadeAccount().isVip() || rfbPlayer.getMinecadeAccount().isTitan())){
+                final Player bukkitPlayer = rfbPlayer.getBukkitPlayer();
+                RunFromTheBeastPlugin.getInstance().getServer().getScheduler().runTask(RunFromTheBeastPlugin.getInstance(), new Runnable() {
+                    @Override
+                    public void run() {
+                        bukkitPlayer.kickPlayer(RunFromTheBeastPlugin.getMessage("game.non-vip-message"));
+                    }
+                });
+                return;
+            }
+        }
+        
         gamePlayers.put(rfbPlayer.getBukkitPlayer().getName(), rfbPlayer);
         nextMatchPlayersQueue.add(rfbPlayer);
         ghostManager.setGhost(rfbPlayer.getBukkitPlayer(), true);
@@ -372,13 +389,10 @@ public class RFBGame {
         String kdr = (double) player.getPlayerModel().getLosses() == 0 ? "0" : decimalFormat.format((double) player.getPlayerModel().getKills()
                 / (double) player.getPlayerModel().getLosses());
         String timePlayed = decimalFormat.format((double) player.getPlayerModel().getTimePlayed() / (double) 86400);
-  
-        statsMeta.setPages(String.format(
-                "%s%s%s STATS! \n\n\n%s %sWins: %s%s\n %sKills: %s%s\n %sDeaths: %s%s\n %sLooses: %s%s\n %sButter Coins: %s%s\n %sKDR: %s%s\n %sTime played: %s%s days.",
-                ChatColor.BOLD, ChatColor.RED, player.getBukkitPlayer().getName().toUpperCase(), ChatColor.DARK_GRAY, ChatColor.BOLD, ChatColor.DARK_GRAY,
-                player.getPlayerModel().getWins(), ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getKills(), ChatColor.BOLD,
-                ChatColor.DARK_GRAY, player.getPlayerModel().getDeaths(), ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getLosses(),
-                ChatColor.BOLD, ChatColor.DARK_GRAY, player.getMinecadeAccount().getButterCoins(), ChatColor.BOLD, ChatColor.DARK_GRAY, kdr, ChatColor.BOLD, ChatColor.DARK_GRAY, timePlayed));
+        
+        statsMeta.setPages(String.format(RunFromTheBeastPlugin.getMessage("game.book.stats"),player.getBukkitPlayer().getName().toUpperCase(), 
+                player.getPlayerModel().getWins(), player.getPlayerModel().getKills(), player.getPlayerModel().getDeaths(), 
+                player.getPlayerModel().getLosses(), player.getMinecadeAccount().getButterCoins(), kdr, timePlayed));
                 stats.setItemMeta(statsMeta);
   
         return stats;
@@ -425,12 +439,12 @@ public class RFBGame {
     
     private void updateDragonBar(Player player) {
         if (null == nextMatch) {
-            DragonBarUtils.setMessage(player, "All Matches Are Full", 100f);
+            DragonBarUtils.setMessage(player, RunFromTheBeastPlugin.getMessage("game.dragonbar.server.full"), 100f);
             return;
         }
         int playersToStart = Math.max(0, nextMatch.getRequiredPlayerCount() - nextMatchPlayersQueue.size());
         if (playersToStart == 0) {
-            DragonBarUtils.setMessage(player, String.format("Next Match Starting In: %s", String.valueOf(Math.max(0, countdown))),
+            DragonBarUtils.setMessage(player, String.format(RunFromTheBeastPlugin.getMessage("game.dragonbar.starting"), String.valueOf(Math.max(0, countdown))),
                     ((countdown * 1f) / (lobbyCountdown * 1f)) * 100f);
         } else {
             String messageDragonBar = String.format("Waiting For %s%s%s Player(s) To Start Next Match, " +
@@ -440,8 +454,7 @@ public class RFBGame {
                     ChatColor.RESET, ChatColor.YELLOW, ChatColor.RESET, ChatColor.GOLD, ChatColor.BOLD, ChatColor.RESET, 
                     ChatColor.GOLD, ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_PURPLE, ChatColor.RESET);
             
-            String tempMessage =  String.format("Waiting For %s%s%s Player(s) To Start Next Match", ChatColor.GREEN, String.valueOf(Math.max(0, playersToStart)), 
-                    ChatColor.RESET);
+            String tempMessage =  String.format(RunFromTheBeastPlugin.getMessage("game.dragonbar.waiting.players"), String.valueOf(Math.max(0, playersToStart)));
             DragonBarUtils.setMovingMessage(player, tempMessage,
                     (nextMatch.getRequiredPlayerCount() - playersToStart) * (100f/nextMatch.getRequiredPlayerCount()), 4);
         }
@@ -467,7 +480,11 @@ public class RFBGame {
             // Create teams
             // if (this.scoreboard.getTeams().isEmpty()) {
             for (PlayerTagEnum tag : PlayerTagEnum.values()) {
-                this.scoreboard.registerNewTeam(tag.name()).setPrefix(tag.getPrefix());
+                if(!RunFromTheBeastPlugin.getMessage(String.format("rank.%s", tag.name().toLowerCase())).equalsIgnoreCase(String.format("rank.%s", tag.name().toLowerCase()))){
+                    this.scoreboard.registerNewTeam(tag.name()).setPrefix(RunFromTheBeastPlugin.getMessage(String.format("rank.%s", tag.name().toLowerCase())));
+                } else {
+                    this.scoreboard.registerNewTeam(tag.name()).setPrefix(tag.getPrefix());
+                }
             }
         }
 
@@ -475,7 +492,13 @@ public class RFBGame {
             PlayerTagEnum playerTag = PlayerTagEnum.getTag(rfbPlayer.getBukkitPlayer(), rfbPlayer.getMinecadeAccount());
             Team team = this.scoreboard.getTeam(playerTag.name());
             team.addPlayer(Bukkit.getOfflinePlayer(rfbPlayer.getBukkitPlayer().getName()));
-            team.setPrefix(playerTag.getPrefix());
+            
+            if(!RunFromTheBeastPlugin.getMessage(String.format("rank.%s", playerTag.name().toLowerCase())).equalsIgnoreCase(String.format("rank.%s", playerTag.name().toLowerCase()))){
+                team.setPrefix(RunFromTheBeastPlugin.getMessage(String.format("rank.%s", playerTag.name().toLowerCase())));
+            } else {
+                team.setPrefix(playerTag.getPrefix());
+            }
+            
         }
 
         public Scoreboard getScoreboard() {
@@ -534,7 +557,7 @@ public class RFBGame {
                 // Check if the server needs more players or if the player is
                 // VIP
                 if (Bukkit.getOnlinePlayers().length <= RFBGame.this.maxPlayers
-                        || (rfbPlayer.isVip() && Bukkit.getOnlinePlayers().length <= RFBGame.this.maxVipPlayers)) {
+                        || ((rfbPlayer.isVip() || rfbPlayer.isTitan()) && Bukkit.getOnlinePlayers().length <= RFBGame.this.maxVipPlayers)) {
                     onPlayerJoinLobby(rfbPlayer);
                 }
                 // If the server is full disconnect the player.

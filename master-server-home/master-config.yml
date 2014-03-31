@@ -5,15 +5,10 @@
 # Entities root packages
 entities:
     package: 'com.minecade.rfb.data'
-
+locale: es
+lobby-teleport: lobby
 # Server
 server:
-    announcements:
-    - '&dVisit http://skydoesminecraft.com/shop to purchase VIP!'
-    - '&dJoin the fun at http://skydoesminecraft.com for up-to-date information on Sky Networks!'
-    - '&dVIP users can join to full servers, visit http://skydoesminecraft.com/shop to purchase VIP!'
-    - '&dWant to be the Beast? Get VIP at http://skydoesminecraft.com/shop'
-    - '&dVIP players can ride other players and avoid hits from the beast, Get VIP at http://skydoesminecraft.com/shop'
     id: <index>     
     name: 'Run from The Beast Server <index>'
     max-players: 30

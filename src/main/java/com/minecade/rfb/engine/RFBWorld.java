@@ -270,9 +270,9 @@ public class RFBWorld {
                 Block islandBlock = this.world.getBlockAt(this.getChestLocations("finalchesttwo"));
                 Chest islandChest = (Chest) islandBlock.getState();
                 islandChest.getInventory().clear();
-                islandChest.getInventory().setItem(0, new ItemStack(Material.SAPLING));
+                islandChest.getInventory().setItem(0, new ItemStack(Material.AIR));
                 islandChest.getInventory().setItem(1, bow);
-                islandChest.getInventory().setItem(2, new ItemStack(Material.SAPLING));
+                islandChest.getInventory().setItem(2, new ItemStack(Material.AIR));
                 islandChest.getInventory().setItem(3, new ItemStack((Material.ARROW), 1));
                 //TODO add potion of night vision to cheast two
                 islandBlock = this.world.getBlockAt(this.getChestLocations("finalchestone"));
