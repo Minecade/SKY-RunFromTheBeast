@@ -6,14 +6,13 @@
 entities:
     package: 'com.minecade.rfb.data'
 locale: es
-lobby-teleport: lobby
 # Server
 server:
     id: <index>     
     name: 'Run from The Beast Server <index>'
     max-players: 30
     max-vip-players: 45
-    
+    lobby-teleport: lobby1
 
 # Match
 match:

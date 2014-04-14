@@ -61,13 +61,14 @@ public class RFBMatch {
     private final MatchScoreboard rfbScoreboard;
     private final MatchTimerTask timerTask;
     private List<String> broadcastMessages;
-    private final String LOBBY = "lobby1";
+    private String LOBBY = "lobby1";
     
     private Status status = Status.WAITING_FOR_PLAYERS;
 
     public RFBMatch(RunFromTheBeastPlugin plugin, RFBWorld rfbWorld){
         this.plugin = plugin;
         this.world = rfbWorld;
+        this.LOBBY = (plugin.getConfig().getString("server.lobby-teleport")) != null ? plugin.getConfig().getString("server.lobby-teleport") : LOBBY;
         this.requiredPlayerCount = plugin.getConfig().getInt("match.required-players");
         this.matchCountdown = plugin.getConfig().getInt("match.time");
         this.beastWaitingTime = plugin.getConfig().getInt("match.beast-countdown");
@@ -399,6 +400,7 @@ public class RFBMatch {
                 } else if(event.getCause().equals(DamageCause.SUFFOCATION)) {
                     if(bukkitPlayer.getVehicle() != null){
                         event.setCancelled(true);
+                        this.unrideVehicle(player);
                     }
                 } else {
                     this.unrideVehicle(player);

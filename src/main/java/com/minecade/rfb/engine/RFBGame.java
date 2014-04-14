@@ -52,7 +52,7 @@ public class RFBGame {
         WAITING_FOR_PLAYERS, FULL, OFFLINE;
     }
     
-    private static final String LOBBY = "lobby1";
+    private String LOBBY = "lobby1";
     private RunFromTheBeastPlugin plugin;
     private final World world;
     private final LobbyTimerTask timerTask;
@@ -76,6 +76,7 @@ public class RFBGame {
     public RFBGame(RunFromTheBeastPlugin plugin){
         this.plugin = plugin;
         // Load properties from config
+        this.LOBBY = (plugin.getConfig().getString("server.lobby-teleport")) != null ? plugin.getConfig().getString("server.lobby-teleport") : LOBBY;
         this.maxPlayers = plugin.getConfig().getInt("server.max-players");
         this.maxVipPlayers = plugin.getConfig().getInt("server.max-vip-players");
         this.lobbyCountdown = plugin.getConfig().getInt("match.start-countdown");
@@ -232,6 +233,7 @@ public class RFBGame {
                 return;
             } else {
                 if(player.getBukkitPlayer().getItemInHand().getType().equals(RFBInventoryEnum.LEAVE_COMPASS.getMaterial())){
+                    Bukkit.getLogger().info(String.format("To Lobby[%s]", LOBBY));
                     EngineUtils.disconnect(player.getBukkitPlayer(), LOBBY, null);
                 }
             }
@@ -306,19 +308,6 @@ public class RFBGame {
     }
     
     private void onPlayerJoinLobby(RFBPlayer rfbPlayer) {
-        if(RunFromTheBeastPlugin.getInstance().isOlimpoNetwork()){
-            if(!(rfbPlayer.getMinecadeAccount().isStaff() || rfbPlayer.getMinecadeAccount().isVip() || rfbPlayer.getMinecadeAccount().isTitan())){
-                final Player bukkitPlayer = rfbPlayer.getBukkitPlayer();
-                RunFromTheBeastPlugin.getInstance().getServer().getScheduler().runTask(RunFromTheBeastPlugin.getInstance(), new Runnable() {
-                    @Override
-                    public void run() {
-                        bukkitPlayer.kickPlayer(RunFromTheBeastPlugin.getMessage("game.non-vip-message"));
-                    }
-                });
-                return;
-            }
-        }
-        
         gamePlayers.put(rfbPlayer.getBukkitPlayer().getName(), rfbPlayer);
         nextMatchPlayersQueue.add(rfbPlayer);
         ghostManager.setGhost(rfbPlayer.getBukkitPlayer(), true);
