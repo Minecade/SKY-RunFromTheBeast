@@ -107,10 +107,14 @@ public class RFBGame {
         plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match3.getName(), new MapLocation(-7, 28, 15), 
                 new MapLocation(-5, 31, 15), Material.PORTAL, this.world));
         this.matches.put(match3.getName(), match3);
-        RFBMatch match4 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.IslandCopyWorld));
+        RFBMatch match4 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.BeastCave));
         plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match4.getName(), new MapLocation(-10, 28, 15), 
                 new MapLocation(-8, 31, 15), Material.PORTAL, this.world));
         this.matches.put(match4.getName(), match4);
+//        RFBMatch match5 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.NetherCustomWorld_nether));
+//        plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match5.getName(), new MapLocation(-10, 28, 15), 
+//                new MapLocation(-8, 31, 15), Material.PORTAL, this.world));
+//        this.matches.put(match5.getName(), match5);
         this.nextMatch = selectNextMatch();
         // init scoreboard
         this.rfbScoreboard = new LobbyScoreboard(this.plugin);

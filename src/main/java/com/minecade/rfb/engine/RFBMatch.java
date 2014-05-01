@@ -542,7 +542,11 @@ public class RFBMatch {
                             + rfbPlayer.getBukkitPlayer().getName();
                     rfbPlayer.getBukkitPlayer().sendMessage(RunFromTheBeastPlugin.getMessage("runner.timeout.winner"));
                     // Update Butter Coins in central DB
-                    this.addButterCoinsAsynchronously(rfbPlayer.getBukkitPlayer(), 3);
+                    if(!RunFromTheBeastPlugin.getInstance().isOlimpoNetwork()) {
+                        this.addButterCoinsAsynchronously(rfbPlayer.getBukkitPlayer(), 3);
+                    } else {
+                        this.addButterCoinsAsynchronously(rfbPlayer.getBukkitPlayer(), 1);
+                    }
                     new FireworksTask(rfbPlayer.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
                 }
             }
@@ -551,7 +555,11 @@ public class RFBMatch {
             //Beast is the winner
             if(this.beast != null && players.containsKey(beast.getBukkitPlayer().getName()) && players.size() <= 1) {
                 // Update Butter Coins in central DB
-                this.addButterCoinsAsynchronously(beast.getBukkitPlayer(), 5);
+                if(!RunFromTheBeastPlugin.getInstance().isOlimpoNetwork()) {
+                    this.addButterCoinsAsynchronously(beast.getBukkitPlayer(), 5);
+                } else {
+                    this.addButterCoinsAsynchronously(beast.getBukkitPlayer(), 1);
+                }
                 
                 // Save player stats
                 beast.getPlayerModel().setWins(beast.getPlayerModel().getWins() + 1);
