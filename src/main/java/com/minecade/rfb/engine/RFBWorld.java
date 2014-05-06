@@ -172,8 +172,8 @@ public class RFBWorld {
         case BeastCave:
             this.world.getBlockAt(-162, 59, 820).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "beastcave-finish"));
             this.world.getBlockAt(-187, 45, 761).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "beastcave-middle"));
-            this.world.getBlockAt(184, 59, 818).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "beastcave-back-finish"));
-            this.world.getBlockAt(188, 59, 818).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "beastcave-back-beggining"));
+            this.world.getBlockAt(-184, 59, 818).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "beastcave-back-finish"));
+            this.world.getBlockAt(-188, 59, 818).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "beastcave-back-beggining"));
             playerSpawnLocations.add(new Vector(-6, 6.5, 678));
             playerSpawnLocations.add(new Vector(-6, 6.5, 679));
             playerSpawnLocations.add(new Vector(-7, 6.5, 678));
@@ -188,11 +188,11 @@ public class RFBWorld {
             spectatorSpawnLocation = new Vector(-185.57, 47, 677.64);
             buttonLocations.put("beastcave-finish", new Vector(-185, 58, 828));
             buttonLocations.put("beastcave-middle", new Vector(-186.55, 42, 765.5));
-            buttonLocations.put("beastcave-back-finish", new Vector(161.52, 58, 822.97));
+            buttonLocations.put("beastcave-back-finish", new Vector(-161.52, 58, 822.97));
             buttonLocations.put("beastcave-back-beggining", new Vector(-185.57, 45, 677.64));
-            chestLocations.put("finalchestone", new Vector(194, 58, 827));
-            chestLocations.put("finalchesttwo", new Vector(186, 58, 835));
-            chestLocations.put("finalchestthree", new Vector(178, 58, 827));
+            chestLocations.put("finalchestone", new Vector(-194, 58, 827));
+            chestLocations.put("finalchesttwo", new Vector(-186, 58, 835));
+            chestLocations.put("finalchestthree", new Vector(-178, 58, 827));
             break;
         case LevelsWorld:
             this.world.getBlockAt(13, 60, 7).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "levelsworld-finish"));
@@ -298,10 +298,12 @@ public class RFBWorld {
             ArrayList<Chest> chests = new ArrayList<Chest>();
             switch (this.worldName) {
             case DamnedTunnelsWorld:
+            case BeastCave:
                 //TODO add chest for beast with potions
             case LevelsWorld:
-                Block levelsBlock = this.world.getBlockAt(this.getChestLocations("finalchestthree"));
-                Chest levelsChest = (Chest) levelsBlock.getState();
+                // FIXME fix this
+//                Block levelsBlock = this.world.getBlockAt(this.getChestLocations("finalchestthree"));
+//                Chest levelsChest = (Chest) levelsBlock.getState();
                 //TODO add potions to chest
             case HaloRaceWorld:
                 //chests
