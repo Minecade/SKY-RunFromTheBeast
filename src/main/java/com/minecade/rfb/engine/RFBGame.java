@@ -19,6 +19,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.World.Environment;
 import org.bukkit.WorldCreator;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -87,34 +88,36 @@ public class RFBGame {
         this.world = worldCreator.createWorld();
         initWorld(this.world);
         this.matches = new HashMap<String, RFBMatch>();
-        // first match
-        RFBMatch match = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.HaloRaceWorld));
-        plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match.getName(), new MapLocation(2, 28, 15), 
+        // match 1
+        RFBMatch match1 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.HaloRaceWorld));
+        plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match1.getName(), new MapLocation(2, 28, 15), 
                 new MapLocation(4, 31, 15), Material.PORTAL, this.world));
-        this.matches.put(match.getName(), match);
-        //second match
-        RFBMatch match1 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.DamnedTunnelsWorld));
-        plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match1.getName(), new MapLocation(-1, 28, 15), 
-                new MapLocation(1, 31, 15), Material.PORTAL, this.world));
         this.matches.put(match1.getName(), match1);
-        //third match
-        RFBMatch match2 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.LevelsWorld));
-        plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match2.getName(), new MapLocation(-4, 28, 15), 
-                new MapLocation(-2, 31, 15), Material.PORTAL, this.world));
+        // match 2
+        RFBMatch match2 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.DamnedTunnelsWorld));
+        plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match2.getName(), new MapLocation(-1, 28, 15), 
+                new MapLocation(1, 31, 15), Material.PORTAL, this.world));
         this.matches.put(match2.getName(), match2);
-        //four match
-        RFBMatch match3 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.IslandWorld));
-        plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match3.getName(), new MapLocation(-7, 28, 15), 
-                new MapLocation(-5, 31, 15), Material.PORTAL, this.world));
+        // match 3
+        RFBMatch match3 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.LevelsWorld));
+        plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match3.getName(), new MapLocation(-4, 28, 15), 
+                new MapLocation(-2, 31, 15), Material.PORTAL, this.world));
         this.matches.put(match3.getName(), match3);
-        RFBMatch match4 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.BeastCave));
-        plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match4.getName(), new MapLocation(-10, 28, 15), 
-                new MapLocation(-8, 31, 15), Material.PORTAL, this.world));
+        // match 4
+        RFBMatch match4 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.IslandWorld));
+        plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match4.getName(), new MapLocation(-7, 28, 15), 
+                new MapLocation(-5, 31, 15), Material.PORTAL, this.world));
         this.matches.put(match4.getName(), match4);
-//        RFBMatch match5 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.NetherCustomWorld_nether));
-//        plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match5.getName(), new MapLocation(-10, 28, 15), 
-//                new MapLocation(-8, 31, 15), Material.PORTAL, this.world));
-//        this.matches.put(match5.getName(), match5);
+        //  match 5
+        RFBMatch match5 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.BeastCave));
+        plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match5.getName(), new MapLocation(-10, 28, 15), 
+                new MapLocation(-8, 31, 15), Material.PORTAL, this.world));
+        this.matches.put(match5.getName(), match5);
+        // match 6
+        RFBMatch match6 = new RFBMatch(this.plugin, new RFBWorld(RFBWorldName.NetherCustomWorld, Environment.NETHER));
+        plugin.getPortalManager().addPortalToMatch(new MinecadePortal(match6.getName(), new MapLocation(-13, 28, 15), 
+                new MapLocation(-11, 31, 15), Material.PORTAL, this.world));
+        this.matches.put(match6.getName(), match6);
         this.nextMatch = selectNextMatch();
         // init scoreboard
         this.rfbScoreboard = new LobbyScoreboard(this.plugin);

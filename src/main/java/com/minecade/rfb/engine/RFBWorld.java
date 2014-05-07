@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.World.Environment;
 import org.bukkit.WorldCreator;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
@@ -19,9 +20,6 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.potion.Potion;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.potion.PotionType;
 import org.bukkit.util.Vector;
 
 import com.google.common.collect.Iterators;
@@ -40,17 +38,22 @@ public class RFBWorld {
     private final World world;
     private Iterator<Vector> playerSpawnCycleIterator;
 
-    public RFBWorld(RFBWorldName name){
+    public RFBWorld(RFBWorldName name) {
+        this(name, Environment.NORMAL);
+    }
+
+    public RFBWorld(RFBWorldName name, Environment environment) {
         this.worldName = name;
         // initialize world related objects
         WorldCreator worldCreator = new WorldCreator(worldName.name());
         worldCreator.generator(RunFromTheBeastPlugin.getInstance().getEmptyGenerator());
+        worldCreator.environment(environment);
         world = worldCreator.createWorld();
         EngineUtils.setupWorld(world);
         this.setupRFBWorld(this.worldName);
         this.playerSpawnCycleIterator = Iterators.cycle(this.playerSpawnLocations);
     }
-    
+
     private void setupRFBWorld(RFBWorldName name){
         List<Vector> playerSpawnLocations = new ArrayList<Vector>();
         List<Vector> playerFreeSpawnLocations = new ArrayList<Vector>();
@@ -146,7 +149,7 @@ public class RFBWorld {
               chestLocations.put("finalchestone", new Vector(-20, 71, 975));
               chestLocations.put("finalchesttwo", new Vector(-11, 71, 991));
               break;
-        case NetherCustomWorld_nether:
+        case NetherCustomWorld:
             this.world.getBlockAt(163, 56, 55).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "netherworld-finish"));
             this.world.getBlockAt(153, 55, 54).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "netherworld-back-finish"));
             this.world.getBlockAt(153, 55, 56).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "netherworld-back-beggining"));
@@ -297,6 +300,7 @@ public class RFBWorld {
             
             ArrayList<Chest> chests = new ArrayList<Chest>();
             switch (this.worldName) {
+            case NetherCustomWorld:
             case DamnedTunnelsWorld:
             case BeastCave:
                 //TODO add chest for beast with potions

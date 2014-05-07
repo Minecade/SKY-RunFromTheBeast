@@ -7,6 +7,6 @@ public enum RFBWorldName {
     LevelsWorld,
     IslandWorld,
     IslandCopyWorld,
-    NetherCustomWorld_nether,
+    NetherCustomWorld,
     BeastCave
 }
