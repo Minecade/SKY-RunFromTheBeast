@@ -6,7 +6,7 @@ public enum RFBWorldName {
     DamnedTunnelsWorld,
     LevelsWorld,
     IslandWorld,
-    IslandCopyWorld,
+    //IslandCopyWorld,
     NetherCustomWorld,
     BeastCave
 }

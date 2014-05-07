@@ -20,6 +20,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.potion.Potion;
+import org.bukkit.potion.PotionType;
 import org.bukkit.util.Vector;
 
 import com.google.common.collect.Iterators;
@@ -129,26 +131,26 @@ public class RFBWorld {
             chestLocations.put("finalchestone", new Vector(-20, 71, 975));
             chestLocations.put("finalchesttwo", new Vector(-11, 71, 991));
             break;
-        case IslandCopyWorld:
-            this.world.getBlockAt(-12, 72, 991).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "islandCopyworld-finishOne"));
-            this.world.getBlockAt(-21, 72, 976).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "islandCopyworld-finishTwo"));
-              playerSpawnLocations.add(new Vector(-84, 65, 1102));
-              playerSpawnLocations.add(new Vector(-84, 65, 1102));
-              playerSpawnLocations.add(new Vector(-84, 65, 1102));
-              playerSpawnLocations.add(new Vector(-84, 65, 1102));
-              this.playerSpawnLocations = playerSpawnLocations;
-              playerFreeSpawnLocations.add(new Vector(7, 85, 1138));
-              playerFreeSpawnLocations.add(new Vector(7, 85, 1138));
-              playerFreeSpawnLocations.add(new Vector(7, 85, 1138));
-              playerFreeSpawnLocations.add(new Vector(7, 85, 1138));
-              this.playerFreeSpawnLocations = playerFreeSpawnLocations;
-              beastSpawnLocation = new Vector(-69, 66, 1106);
-              spectatorSpawnLocation = new Vector(-56, 65, 1097);
-              buttonLocations.put("islandCopyworld-finishOne", new Vector(-21.33, 73, 1056.72));
-              buttonLocations.put("islandCopyworld-finishTwo", new Vector(8.5, 85, 1138.96));
-              chestLocations.put("finalchestone", new Vector(-20, 71, 975));
-              chestLocations.put("finalchesttwo", new Vector(-11, 71, 991));
-              break;
+//        case IslandCopyWorld:
+//            this.world.getBlockAt(-12, 72, 991).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "islandCopyworld-finishOne"));
+//            this.world.getBlockAt(-21, 72, 976).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "islandCopyworld-finishTwo"));
+//              playerSpawnLocations.add(new Vector(-84, 65, 1102));
+//              playerSpawnLocations.add(new Vector(-84, 65, 1102));
+//              playerSpawnLocations.add(new Vector(-84, 65, 1102));
+//              playerSpawnLocations.add(new Vector(-84, 65, 1102));
+//              this.playerSpawnLocations = playerSpawnLocations;
+//              playerFreeSpawnLocations.add(new Vector(7, 85, 1138));
+//              playerFreeSpawnLocations.add(new Vector(7, 85, 1138));
+//              playerFreeSpawnLocations.add(new Vector(7, 85, 1138));
+//              playerFreeSpawnLocations.add(new Vector(7, 85, 1138));
+//              this.playerFreeSpawnLocations = playerFreeSpawnLocations;
+//              beastSpawnLocation = new Vector(-69, 66, 1106);
+//              spectatorSpawnLocation = new Vector(-56, 65, 1097);
+//              buttonLocations.put("islandCopyworld-finishOne", new Vector(-21.33, 73, 1056.72));
+//              buttonLocations.put("islandCopyworld-finishTwo", new Vector(8.5, 85, 1138.96));
+//              chestLocations.put("finalchestone", new Vector(-20, 71, 975));
+//              chestLocations.put("finalchesttwo", new Vector(-11, 71, 991));
+//              break;
         case NetherCustomWorld:
             this.world.getBlockAt(163, 56, 55).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "netherworld-finish"));
             this.world.getBlockAt(153, 55, 54).setMetadata("buttonId", new FixedMetadataValue(RunFromTheBeastPlugin.getInstance(), "netherworld-back-finish"));
@@ -300,27 +302,7 @@ public class RFBWorld {
             
             ArrayList<Chest> chests = new ArrayList<Chest>();
             switch (this.worldName) {
-            case NetherCustomWorld:
-            case DamnedTunnelsWorld:
-            case BeastCave:
-                //TODO add chest for beast with potions
-            case LevelsWorld:
-                // FIXME fix this
-//                Block levelsBlock = this.world.getBlockAt(this.getChestLocations("finalchestthree"));
-//                Chest levelsChest = (Chest) levelsBlock.getState();
-                //TODO add potions to chest
-            case HaloRaceWorld:
-                //chests
-                Block haloBlock = this.world.getBlockAt(this.getChestLocations("finalchestone"));
-                Chest haloChest = (Chest) haloBlock.getState();
-                chests.add(haloChest);
-                haloBlock = this.world.getBlockAt(this.getChestLocations("finalchesttwo"));
-                haloChest = (Chest) haloBlock.getState();
-                chests.add(haloChest);
-                //TODO add potions to chest
-                break;
             case IslandWorld:
-            case IslandCopyWorld:
                 Block islandBlock = this.world.getBlockAt(this.getChestLocations("finalchesttwo"));
                 Chest islandChest = (Chest) islandBlock.getState();
                 islandChest.getInventory().clear();
@@ -328,13 +310,66 @@ public class RFBWorld {
                 islandChest.getInventory().setItem(1, bow);
                 islandChest.getInventory().setItem(2, new ItemStack(Material.AIR));
                 islandChest.getInventory().setItem(3, new ItemStack((Material.ARROW), 1));
-                //TODO add potion of night vision to cheast two
+                islandChest.getInventory().setItem(4, new ItemStack(Material.AIR));
+                islandChest.getInventory().setItem(5, new Potion(PotionType.NIGHT_VISION, PotionType.NIGHT_VISION.getMaxLevel()).toItemStack(1));
+                islandChest.getInventory().setItem(6, new ItemStack(Material.AIR));
+                islandChest.getInventory().setItem(7, new ItemStack((Material.IRON_AXE), 1));
                 islandBlock = this.world.getBlockAt(this.getChestLocations("finalchestone"));
                 islandChest = (Chest) islandBlock.getState();
                 //TODO add all the potions to the chest one
                 chests.add(islandChest);
                 break;
             default:
+                Location chestLocation = this.getChestLocations("finalchestone");
+                if (null != chestLocation) {
+                    Block chestBlock = this.world.getBlockAt(chestLocation);
+                    if (null != chestBlock && chestBlock.getState() instanceof Chest) {
+                        Chest chest = (Chest) chestBlock.getState();
+                        chests.add(chest);
+                    }
+                }
+                chestLocation = this.getChestLocations("finalchesttwo");
+                if (null != chestLocation) {
+                    Block chestBlock = this.world.getBlockAt(chestLocation);
+                    if (null != chestBlock && chestBlock.getState() instanceof Chest) {
+                        Chest chest = (Chest) chestBlock.getState();
+                        chests.add(chest);
+                    }
+                }
+                chestLocation = this.getChestLocations("finalchestthree");
+                if (null != chestLocation) {
+                    Block chestBlock = this.world.getBlockAt(chestLocation);
+                    if (null != chestBlock && chestBlock.getState() instanceof Chest) {
+                        Chest chest = (Chest) chestBlock.getState();
+                        chest.getInventory().setItem(0, new ItemStack(Material.AIR));
+                        chest.getInventory().setItem(1, new Potion(PotionType.INSTANT_HEAL, PotionType.INSTANT_HEAL.getMaxLevel()).toItemStack(1));
+                        chest.getInventory().setItem(2, new ItemStack(Material.AIR));
+                        chest.getInventory().setItem(3, new Potion(PotionType.SPEED, PotionType.SPEED.getMaxLevel()).toItemStack(1));
+                        chest.getInventory().setItem(4, new ItemStack(Material.AIR));
+                        chest.getInventory().setItem(5, new Potion(PotionType.STRENGTH, PotionType.STRENGTH.getMaxLevel()).toItemStack(1));
+                        chest.getInventory().setItem(6, new ItemStack(Material.AIR));
+                        chest.getInventory().setItem(7, new Potion(PotionType.POISON, PotionType.POISON.getMaxLevel()).splash().toItemStack(1));
+                        chest.getInventory().setItem(8, new ItemStack(Material.AIR));
+                        chest.getInventory().setItem(9, new Potion(PotionType.SLOWNESS, PotionType.SLOWNESS.getMaxLevel()).splash().toItemStack(1));
+                        chest.getInventory().setItem(10, new ItemStack(Material.AIR));
+                        chest.getInventory().setItem(11, new Potion(PotionType.WEAKNESS, PotionType.WEAKNESS.getMaxLevel()).splash().toItemStack(1));
+                        chest.getInventory().setItem(12, new ItemStack(Material.AIR));
+                        chest.getInventory().setItem(13, new Potion(PotionType.INSTANT_HEAL, PotionType.INSTANT_HEAL.getMaxLevel()).toItemStack(1));
+                        chest.getInventory().setItem(14, new ItemStack(Material.AIR));
+                        chest.getInventory().setItem(15, new Potion(PotionType.SPEED, PotionType.SPEED.getMaxLevel()).toItemStack(1));
+                        chest.getInventory().setItem(16, new ItemStack(Material.AIR));
+                        chest.getInventory().setItem(17, new Potion(PotionType.STRENGTH, PotionType.STRENGTH.getMaxLevel()).toItemStack(1));
+                        chest.getInventory().setItem(18, new ItemStack(Material.AIR));
+                        chest.getInventory().setItem(19, new Potion(PotionType.POISON, PotionType.POISON.getMaxLevel()).splash().toItemStack(1));
+                        chest.getInventory().setItem(20, new ItemStack(Material.AIR));
+                        chest.getInventory().setItem(21, new Potion(PotionType.SLOWNESS, PotionType.SLOWNESS.getMaxLevel()).splash().toItemStack(1));
+                        chest.getInventory().setItem(22, new ItemStack(Material.AIR));
+                        chest.getInventory().setItem(23, new Potion(PotionType.WEAKNESS, PotionType.WEAKNESS.getMaxLevel()).splash().toItemStack(1));
+                        chest.getInventory().setItem(24, new ItemStack(Material.AIR));
+                        chest.getInventory().setItem(25, new Potion(PotionType.INSTANT_HEAL, PotionType.INSTANT_HEAL.getMaxLevel()).toItemStack(1));
+                        chest.getInventory().setItem(26, new ItemStack(Material.AIR));
+                    }
+                }
                 break;
             }
             Iterator<ItemStack> itemsCycleIterator =  Iterators.cycle(items);
@@ -351,7 +386,7 @@ public class RFBWorld {
             }
         }
     }
-    
+
     public Location getBeastSpawnLocation(){
         if(beastSpawnLocation != null){
             return new Location(world, beastSpawnLocation.getX(), beastSpawnLocation.getY(), beastSpawnLocation.getZ());
