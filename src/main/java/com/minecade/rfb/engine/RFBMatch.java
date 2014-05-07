@@ -214,6 +214,7 @@ public class RFBMatch {
                         this.plugin.getPersistence().updatePlayerAsynchronously(beast.getPlayerModel());
                         this.beast = null;
                     }
+                    
                 } else {
                     // Death is a runner
                     // Save stats in database
